@@ -1044,6 +1044,7 @@ export default function Employees() {
                 Assign tasks to employees to see performance analytics
               </Card>
             )}
+            </div>
           </TabsContent>
         </Tabs>
       </div>
