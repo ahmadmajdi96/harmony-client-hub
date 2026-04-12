@@ -3,7 +3,8 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, FolderKanban, Users, FileText, ListChecks,
-  ChevronLeft, ChevronRight, Zap, Settings, BarChart3, Truck, Activity,
+  ChevronLeft, ChevronRight, Settings, BarChart3, Truck, Activity,
+  HardHat,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -24,72 +25,90 @@ export default function AppLayout() {
   const location = useLocation();
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-background">
+      {/* Sidebar */}
       <aside
         className={cn(
-          "flex flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-all duration-300 shrink-0",
-          collapsed ? "w-[68px]" : "w-60"
+          "flex flex-col shrink-0 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
+          "bg-sidebar text-sidebar-foreground",
+          collapsed ? "w-[72px]" : "w-[260px]"
         )}
       >
-        {/* Logo */}
-        <div className="flex items-center gap-2.5 px-4 h-16 border-b border-sidebar-border shrink-0">
-          <div className="h-9 w-9 rounded-xl bg-sidebar-primary flex items-center justify-center shrink-0 shadow-lg shadow-sidebar-primary/20">
-            <Zap className="h-5 w-5 text-sidebar-primary-foreground" />
+        {/* Brand */}
+        <div className={cn(
+          "flex items-center gap-3 h-16 shrink-0 border-b border-sidebar-border/50 px-5",
+        )}>
+          <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-sidebar-primary to-[hsl(215_80%_42%)] flex items-center justify-center shrink-0 shadow-lg shadow-sidebar-primary/25">
+            <HardHat className="h-5 w-5 text-sidebar-primary-foreground" />
           </div>
           {!collapsed && (
-            <span className="font-bold text-lg text-sidebar-accent-foreground tracking-tight animate-fade-in">
-              HarmonyHub
-            </span>
+            <div className="animate-fade-in">
+              <span className="font-bold text-[15px] text-sidebar-accent-foreground tracking-tight leading-none block">
+                HarmonyHub
+              </span>
+              <span className="text-[10px] text-sidebar-foreground/60 font-medium tracking-widest uppercase">
+                Engineering
+              </span>
+            </div>
           )}
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 overflow-y-auto py-3 space-y-0.5 px-2">
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
           {navItems.map((item) => {
             const isActive = item.path === "/"
               ? location.pathname === "/"
               : location.pathname === item.path || location.pathname.startsWith(item.path + "/");
-            
-            const linkContent = (
+
+            const link = (
               <Link
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200",
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-200 relative group",
                   isActive
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground hover:translate-x-0.5"
+                    ? "bg-sidebar-primary/15 text-sidebar-accent-foreground"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
                 )}
               >
-                <item.icon className={cn("h-[18px] w-[18px] shrink-0 transition-transform", isActive && "scale-110")} />
+                {/* Active indicator bar */}
+                {isActive && (
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full bg-sidebar-primary" />
+                )}
+                <item.icon className={cn(
+                  "h-[18px] w-[18px] shrink-0 transition-colors duration-200",
+                  isActive ? "text-sidebar-primary" : "text-sidebar-foreground/70 group-hover:text-sidebar-accent-foreground"
+                )} />
                 {!collapsed && <span className="truncate flex-1">{item.label}</span>}
-                {isActive && !collapsed && <div className="h-1.5 w-1.5 rounded-full bg-sidebar-primary animate-pulse" />}
               </Link>
             );
 
             if (collapsed) {
               return (
                 <Tooltip key={item.path} delayDuration={0}>
-                  <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
-                  <TooltipContent side="right" className="font-medium">{item.label}</TooltipContent>
+                  <TooltipTrigger asChild>{link}</TooltipTrigger>
+                  <TooltipContent side="right" sideOffset={8} className="font-medium text-xs">
+                    {item.label}
+                  </TooltipContent>
                 </Tooltip>
               );
             }
 
-            return linkContent;
+            return <div key={item.path}>{link}</div>;
           })}
         </nav>
 
-        {/* Collapse button */}
+        {/* Collapse toggle */}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="flex items-center justify-center h-12 border-t border-sidebar-border text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent/30 transition-all duration-200"
+          className="flex items-center justify-center h-11 border-t border-sidebar-border/50 text-sidebar-foreground/50 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent/40 transition-all duration-200"
         >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </button>
       </aside>
 
-      <main className="flex-1 overflow-y-auto bg-background">
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto">
         <Outlet />
       </main>
     </div>
