@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { KPICard } from "@/components/shared/KPICard";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,7 @@ export default function FileManager() {
   const [uploadClientId, setUploadClientId] = useState("");
   const [uploadProjectId, setUploadProjectId] = useState("");
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [pendingDeleteFile, setPendingDeleteFile] = useState<{ id: string; file_path: string } | null>(null);
 
   const { data: files } = useQuery({
     queryKey: ["files-all"],
@@ -65,13 +67,15 @@ export default function FileManager() {
     setUploading(true);
     try {
       for (const file of pendingFiles) {
-        const folder = uploadProjectId ? `projects/${uploadProjectId}` : uploadClientId ? `clients/${uploadClientId}` : "general";
+        const normalizedProjectId = uploadProjectId === "none" ? "" : uploadProjectId;
+        const normalizedClientId = uploadClientId === "none" ? "" : uploadClientId;
+        const folder = normalizedProjectId ? `projects/${normalizedProjectId}` : normalizedClientId ? `clients/${normalizedClientId}` : "general";
         const filePath = `${folder}/${Date.now()}_${file.name}`;
         const { error: uploadError } = await supabase.storage.from("project-files").upload(filePath, file);
         if (uploadError) throw uploadError;
         const { error: dbError } = await supabase.from("project_files").insert({
           file_name: file.name, file_path: filePath, file_size: file.size, file_type: file.type, uploaded_by: "System",
-          client_id: uploadClientId || null, project_id: uploadProjectId || null,
+          client_id: normalizedClientId || null, project_id: normalizedProjectId || null,
         });
         if (dbError) throw dbError;
       }
@@ -95,6 +99,7 @@ export default function FileManager() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["files-all"] });
       toast({ title: "File deleted", variant: "destructive" });
+      setPendingDeleteFile(null);
     },
   });
 
@@ -136,7 +141,6 @@ export default function FileManager() {
           <KPICard title="Documents" value={String(docFiles)} icon={FileArchive} status="info" />
         </div>
 
-        {/* Search & Filters */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 justify-between">
           <div className="flex flex-col sm:flex-row gap-3 flex-1">
             <div className="relative max-w-sm flex-1">
@@ -181,7 +185,7 @@ export default function FileManager() {
                     <TableCell>
                       <div className="flex gap-1">
                         <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => downloadFile(f.file_path, f.file_name)}><Download className="h-3 w-3" /></Button>
-                        <Button size="sm" variant="outline" className="h-7 text-xs text-destructive" onClick={() => deleteFileMutation.mutate({ id: f.id, file_path: f.file_path })}><Trash2 className="h-3 w-3" /></Button>
+                        <Button size="sm" variant="outline" className="h-7 text-xs text-destructive" onClick={() => setPendingDeleteFile({ id: f.id, file_path: f.file_path })}><Trash2 className="h-3 w-3" /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -228,6 +232,16 @@ export default function FileManager() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!pendingDeleteFile}
+        onOpenChange={(open) => !open && setPendingDeleteFile(null)}
+        title="Delete file?"
+        description="This will permanently remove the file from storage and the file list."
+        confirmLabel="Delete file"
+        variant="destructive"
+        onConfirm={() => pendingDeleteFile && deleteFileMutation.mutate(pendingDeleteFile)}
+      />
     </div>
   );
 }

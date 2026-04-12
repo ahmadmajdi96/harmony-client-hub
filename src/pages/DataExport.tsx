@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { saveAs } from "file-saver";
+import { toast } from "sonner";
 import { utils, write } from "xlsx";
 
 type EntityType = "projects" | "clients" | "suppliers" | "tasks";
@@ -209,11 +211,12 @@ export default function DataExport() {
         return row;
       });
 
-      if (exportData.length === 0) return;
+      if (exportData.length === 0) {
+        toast.error("No data to export");
+        return;
+      }
 
       const ws = utils.json_to_sheet(exportData);
-
-      // Auto-size columns
       const keys = Object.keys(exportData[0] || {});
       ws["!cols"] = keys.map(key => ({
         wch: Math.max(key.length, ...exportData.map(r => String(r[key] || "").length)) + 2,
@@ -222,7 +225,6 @@ export default function DataExport() {
       const wb = utils.book_new();
       utils.book_append_sheet(wb, ws, ENTITY_CONFIG[entity].label);
 
-      // Add metadata sheet
       const meta = [
         { Field: "Entity", Value: ENTITY_CONFIG[entity].label },
         { Field: "Total Records", Value: String(filteredData.length) },
@@ -237,20 +239,21 @@ export default function DataExport() {
       metaWs["!cols"] = [{ wch: 18 }, { wch: 60 }];
       utils.book_append_sheet(wb, metaWs, "Export Info");
 
+      const filename = `${entity}_export_${format(new Date(), "yyyy-MM-dd")}.xlsx`;
       const wbout = write(wb, { bookType: "xlsx", type: "array" }) as ArrayBuffer;
-      const blob = new Blob([wbout], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${entity}_export_${format(new Date(), "yyyy-MM-dd")}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 100);
+      const blob = new Blob([wbout], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      saveAs(blob, filename);
+      toast.success("Excel file generated", {
+        description: `${filteredData.length} ${ENTITY_CONFIG[entity].label.toLowerCase()} exported.`,
+      });
     } catch (e) {
       console.error("Export failed:", e);
+      toast.error("Excel export failed", {
+        description: e instanceof Error ? e.message : "Please try again.",
+      });
     }
   };
 
