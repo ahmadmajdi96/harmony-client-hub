@@ -414,6 +414,68 @@ export type Database = {
           },
         ]
       }
+      references: {
+        Row: {
+          activity: string
+          client: string
+          client_short: string
+          company: string
+          created_at: string
+          doc_type: string
+          id: string
+          month: string
+          project_id: string | null
+          project_name: string
+          project_short: string
+          reference: string
+          revision: string
+          sequence: string
+          year: string
+        }
+        Insert: {
+          activity: string
+          client: string
+          client_short: string
+          company: string
+          created_at?: string
+          doc_type: string
+          id?: string
+          month: string
+          project_id?: string | null
+          project_name: string
+          project_short: string
+          reference: string
+          revision?: string
+          sequence: string
+          year: string
+        }
+        Update: {
+          activity?: string
+          client?: string
+          client_short?: string
+          company?: string
+          created_at?: string
+          doc_type?: string
+          id?: string
+          month?: string
+          project_id?: string | null
+          project_name?: string
+          project_short?: string
+          reference?: string
+          revision?: string
+          sequence?: string
+          year?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "references_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppliers: {
         Row: {
           address: string | null
