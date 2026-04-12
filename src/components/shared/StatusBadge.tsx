@@ -14,7 +14,7 @@ const variantStyles = {
   pulse: "bg-info/10 text-info border-info/20 animate-pulse",
 };
 
-export function StatusBadge({ status, variant = "default" }: StatusBadgeProps) {
+export function StatusBadge({ status = "", variant = "default" }: StatusBadgeProps) {
   return (
     <span className={cn(
       "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium border transition-colors",
