@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { KPICard } from "@/components/shared/KPICard";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, ListChecks, Pencil, Trash2, LayoutGrid, List, GripVertical, Search, Eye, Clock, Calendar, User } from "lucide-react";
+import { Plus, ListChecks, Pencil, Trash2, LayoutGrid, List, GripVertical, Search, Eye, Clock, Calendar, User, Users2, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 
@@ -43,6 +43,8 @@ export default function Tasks() {
   const [form, setForm] = useState({ title: "", description: "", status: "todo", priority: "medium", assigned_to: "", due_date: "", project_id: "" });
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+  const [assignDialogTask, setAssignDialogTask] = useState<any>(null);
+  const [assignEmpId, setAssignEmpId] = useState("");
 
   const { data: tasks } = useQuery({
     queryKey: ["tasks-all"],
@@ -56,6 +58,22 @@ export default function Tasks() {
     queryKey: ["projects-list"],
     queryFn: async () => {
       const { data } = await supabase.from("projects").select("id, name");
+      return data || [];
+    },
+  });
+
+  const { data: employees } = useQuery({
+    queryKey: ["employees"],
+    queryFn: async () => {
+      const { data } = await supabase.from("employees").select("*").eq("status", "active");
+      return data || [];
+    },
+  });
+
+  const { data: taskEmployees } = useQuery({
+    queryKey: ["task_employees"],
+    queryFn: async () => {
+      const { data } = await supabase.from("task_employees").select("*");
       return data || [];
     },
   });
@@ -98,6 +116,31 @@ export default function Tasks() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks-all"] });
       toast({ title: "Task deleted", variant: "destructive" });
+    },
+  });
+
+  const assignEmployeeMutation = useMutation({
+    mutationFn: async ({ task_id, employee_id }: { task_id: string; employee_id: string }) => {
+      const { error } = await supabase.from("task_employees").insert({ task_id, employee_id });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["task_employees"] });
+      toast({ title: "Employee assigned to task" });
+      setAssignDialogTask(null);
+      setAssignEmpId("");
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const unassignEmployeeMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("task_employees").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["task_employees"] });
+      toast({ title: "Employee unassigned" });
     },
   });
 
@@ -199,7 +242,8 @@ export default function Tasks() {
                           {t.due_date && <p className="text-[10px] text-muted-foreground mt-1.5">{t.due_date}</p>}
                         </div>
                         <div className="flex flex-col gap-1 shrink-0">
-                          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setSelectedTask(t)}><Eye className="h-3 w-3" /></Button>
+                              <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setAssignDialogTask(t)}><Users2 className="h-3 w-3" /></Button>
+                              <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setSelectedTask(t)}><Eye className="h-3 w-3" /></Button>
                           <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => openEdit(t)}><Pencil className="h-3 w-3" /></Button>
                           <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => deleteMutation.mutate(t.id)}><Trash2 className="h-3 w-3" /></Button>
                         </div>
@@ -234,6 +278,7 @@ export default function Tasks() {
                           <TableCell className="text-sm">{t.due_date || "—"}</TableCell>
                           <TableCell>
                             <div className="flex gap-1">
+                              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setAssignDialogTask(t)}><Users2 className="h-3 w-3" /></Button>
                               <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setSelectedTask(t)}><Eye className="h-3 w-3" /></Button>
                               <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => openEdit(t)}><Pencil className="h-3 w-3" /></Button>
                               <Button size="sm" variant="outline" className="h-7 text-xs text-destructive" onClick={() => deleteMutation.mutate(t.id)}><Trash2 className="h-3 w-3" /></Button>
@@ -334,6 +379,49 @@ export default function Tasks() {
             </div>
           </div>
           <DialogFooter><Button variant="outline" onClick={() => setDialog(false)}>Cancel</Button><Button onClick={() => saveMutation.mutate()} disabled={!form.title || !form.project_id}>{saveMutation.isPending ? "Saving..." : "Save"}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Employee Dialog */}
+      <Dialog open={!!assignDialogTask} onOpenChange={() => setAssignDialogTask(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Assign Employees to "{assignDialogTask?.title}"</DialogTitle><DialogDescription>Manage employee assignments for this task.</DialogDescription></DialogHeader>
+          <div className="space-y-3">
+            {/* Current assignments */}
+            {taskEmployees?.filter((te: any) => te.task_id === assignDialogTask?.id).length > 0 && (
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Currently Assigned</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {taskEmployees?.filter((te: any) => te.task_id === assignDialogTask?.id).map((te: any) => {
+                    const emp = employees?.find((e: any) => e.id === te.employee_id);
+                    return emp ? (
+                      <span key={te.id} className="inline-flex items-center gap-1 rounded-full border bg-accent/30 px-2.5 py-1 text-xs">
+                        {emp.name}
+                        <button onClick={() => unassignEmployeeMutation.mutate(te.id)} className="text-muted-foreground hover:text-destructive"><X className="w-3 h-3" /></button>
+                      </span>
+                    ) : null;
+                  })}
+                </div>
+              </div>
+            )}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Add Employee</Label>
+              <div className="flex gap-2">
+                <Select value={assignEmpId} onValueChange={setAssignEmpId}>
+                  <SelectTrigger className="flex-1"><SelectValue placeholder="Select employee" /></SelectTrigger>
+                  <SelectContent>
+                    {employees?.filter((e: any) => !taskEmployees?.some((te: any) => te.task_id === assignDialogTask?.id && te.employee_id === e.id)).map((e: any) => (
+                      <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button size="sm" disabled={!assignEmpId || assignEmployeeMutation.isPending} onClick={() => assignDialogTask && assignEmployeeMutation.mutate({ task_id: assignDialogTask.id, employee_id: assignEmpId })}>
+                  Add
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setAssignDialogTask(null)}>Done</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

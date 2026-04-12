@@ -18,6 +18,7 @@ import ActivityLog from "./pages/ActivityLog";
 import Reports from "./pages/Reports";
 import DataExport from "./pages/DataExport";
 import Employees from "./pages/Employees";
+import EmployeeDetail from "./pages/EmployeeDetail";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
@@ -62,6 +63,7 @@ const App = () => (
               <Route path="/reports" element={<Reports />} />
               <Route path="/export" element={<DataExport />} />
               <Route path="/employees" element={<Employees />} />
+              <Route path="/employees/:id" element={<EmployeeDetail />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

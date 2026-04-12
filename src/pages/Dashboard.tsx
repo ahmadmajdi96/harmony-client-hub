@@ -6,7 +6,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { FolderKanban, Users, ListChecks, TrendingUp, Clock, Activity, Truck, DollarSign, ArrowUpRight } from "lucide-react";
+import { FolderKanban, Users, ListChecks, TrendingUp, Clock, Activity, Truck, DollarSign, ArrowUpRight, Users2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
@@ -60,6 +60,22 @@ export default function Dashboard() {
     },
   });
 
+  const { data: employees } = useQuery({
+    queryKey: ["employees"],
+    queryFn: async () => {
+      const { data } = await supabase.from("employees").select("*");
+      return data || [];
+    },
+  });
+
+  const { data: taskEmployees } = useQuery({
+    queryKey: ["task_employees"],
+    queryFn: async () => {
+      const { data } = await supabase.from("task_employees").select("*");
+      return data || [];
+    },
+  });
+
   const { data: recentActivity } = useQuery({
     queryKey: ["recent-activity"],
     queryFn: async () => {
@@ -74,6 +90,7 @@ export default function Dashboard() {
   const totalTasks = tasks?.length || 0;
   const totalBudget = projects?.reduce((sum, p) => sum + (Number(p.budget) || 0), 0) || 0;
   const avgProgress = projects?.length ? Math.round(projects.reduce((s, p) => s + p.progress, 0) / projects.length) : 0;
+  const activeEmployees = employees?.filter((e: any) => e.status === "active").length || 0;
 
   const greeting = () => {
     const h = new Date().getHours();
@@ -112,6 +129,7 @@ export default function Dashboard() {
             { title: "Suppliers", value: String(suppliers?.length || 0), icon: Truck, status: "warning" as const },
             { title: "Tasks", value: `${completedTasks}/${totalTasks}`, icon: ListChecks, status: "info" as const },
             { title: "Budget", value: `$${totalBudget.toLocaleString()}`, icon: DollarSign, status: "warning" as const },
+            { title: "Employees", value: String(employees?.length || 0), icon: Users2, status: "info" as const, change: `${activeEmployees} active`, changeType: "positive" as const },
           ].map((kpi) => (
             <motion.div key={kpi.title} variants={itemVariants}>
               <KPICard {...kpi} />
@@ -120,6 +138,41 @@ export default function Dashboard() {
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Employee Workload */}
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }} className="lg:col-span-3">
+            <Card className="rounded-2xl border-border/40 shadow-sm hover:shadow-md transition-shadow duration-300">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2.5">
+                    <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center"><Users2 className="h-4 w-4 text-primary" /></div>
+                    Employee Workload
+                  </CardTitle>
+                  <Link to="/employees" className="text-xs text-primary hover:underline flex items-center gap-1 font-medium">View all <ArrowUpRight className="h-3 w-3" /></Link>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                  {employees?.filter((e: any) => e.status === "active").slice(0, 6).map((emp: any) => {
+                    const taskCount = taskEmployees?.filter((te: any) => te.employee_id === emp.id).length || 0;
+                    return (
+                      <div key={emp.id} className="flex items-center gap-2.5 p-3 rounded-xl border border-border/40 hover:border-primary/20 hover:shadow-sm transition-all">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                          <span className="text-[10px] font-bold text-primary">{emp.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()}</span>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium truncate">{emp.name}</p>
+                          <p className="text-[10px] text-muted-foreground">{taskCount} task{taskCount !== 1 ? "s" : ""}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {(!employees || employees.filter((e: any) => e.status === "active").length === 0) && (
+                    <p className="text-xs text-muted-foreground col-span-full text-center py-4">No active employees. <Link to="/employees" className="text-primary hover:underline">Add employees</Link></p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}

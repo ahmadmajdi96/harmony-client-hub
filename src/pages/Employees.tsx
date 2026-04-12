@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -369,7 +370,7 @@ export default function Employees() {
                                 <span className="text-xs font-bold text-primary">{emp.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()}</span>
                               </div>
                               <div>
-                                <div className="font-medium text-sm">{emp.name}</div>
+                                <Link to={`/employees/${emp.id}`} className="font-medium text-sm hover:text-primary transition-colors">{emp.name}</Link>
                                 <div className="text-xs text-muted-foreground md:hidden">{emp.role || "—"}</div>
                               </div>
                             </div>

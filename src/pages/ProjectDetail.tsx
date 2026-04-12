@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Upload, Trash2, Pencil, Download, FileText, ListChecks, Truck, Calendar, DollarSign, Hash, Users, BarChart3, Building } from "lucide-react";
+import { Plus, Upload, Trash2, Pencil, Download, FileText, ListChecks, Truck, Calendar, DollarSign, Hash, Users, BarChart3, Building, Users2, X } from "lucide-react";
 
 const statusVariant = (s: string) => {
   if (s === "done" || s === "completed") return "success" as const;
@@ -39,6 +39,11 @@ export default function ProjectDetail() {
   const [supplierForm, setSupplierForm] = useState({ supplier_id: "", role: "", notes: "" });
   const [clientDialog, setClientDialog] = useState(false);
   const [clientForm, setClientForm] = useState({ client_id: "", role: "", notes: "" });
+  const [empDialog, setEmpDialog] = useState(false);
+  const [taskEmpDialog, setTaskEmpDialog] = useState<any>(null);
+  const [empFormId, setEmpFormId] = useState("");
+  const [empFormRole, setEmpFormRole] = useState("");
+  const [taskEmpId, setTaskEmpId] = useState("");
 
   const { data: project } = useQuery({
     queryKey: ["project", id],
@@ -98,6 +103,84 @@ export default function ProjectDetail() {
     queryFn: async () => {
       const { data } = await supabase.from("suppliers").select("id, name, reference_number");
       return data || [];
+    },
+  });
+
+  const { data: employees } = useQuery({
+    queryKey: ["employees-active"],
+    queryFn: async () => {
+      const { data } = await supabase.from("employees").select("*").eq("status", "active");
+      return data || [];
+    },
+  });
+
+  const { data: projectEmployees } = useQuery({
+    queryKey: ["project-employees", id],
+    queryFn: async () => {
+      const { data } = await supabase.from("employee_projects").select("*, employees(*)").eq("project_id", id!);
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
+  const { data: taskEmployees } = useQuery({
+    queryKey: ["task_employees_project", id],
+    queryFn: async () => {
+      const taskIds = tasks?.map(t => t.id) || [];
+      if (!taskIds.length) return [];
+      const { data } = await supabase.from("task_employees").select("*").in("task_id", taskIds);
+      return data || [];
+    },
+    enabled: !!tasks && tasks.length > 0,
+  });
+
+  const addProjectEmpMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("employee_projects").insert({ project_id: id!, employee_id: empFormId, role: empFormRole || null });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project-employees", id] });
+      toast({ title: "Employee assigned to project" });
+      setEmpDialog(false);
+      setEmpFormId("");
+      setEmpFormRole("");
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const removeProjectEmpMutation = useMutation({
+    mutationFn: async (epId: string) => {
+      const { error } = await supabase.from("employee_projects").delete().eq("id", epId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project-employees", id] });
+      toast({ title: "Employee removed" });
+    },
+  });
+
+  const assignTaskEmpMutation = useMutation({
+    mutationFn: async ({ task_id, employee_id }: { task_id: string; employee_id: string }) => {
+      const { error } = await supabase.from("task_employees").insert({ task_id, employee_id });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["task_employees_project", id] });
+      toast({ title: "Employee assigned to task" });
+      setTaskEmpId("");
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const unassignTaskEmpMutation = useMutation({
+    mutationFn: async (teId: string) => {
+      const { error } = await supabase.from("task_employees").delete().eq("id", teId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["task_employees_project", id] });
+      toast({ title: "Employee unassigned from task" });
     },
   });
 
@@ -274,6 +357,7 @@ export default function ProjectDetail() {
             <TabsTrigger value="tasks"><ListChecks className="h-4 w-4 mr-1" /> Tasks ({totalTasks})</TabsTrigger>
             <TabsTrigger value="clients"><Building className="h-4 w-4 mr-1" /> Clients ({projectClients?.length || 0})</TabsTrigger>
             <TabsTrigger value="suppliers"><Truck className="h-4 w-4 mr-1" /> Suppliers ({projectSuppliers?.length || 0})</TabsTrigger>
+            <TabsTrigger value="employees"><Users2 className="h-4 w-4 mr-1" /> Employees ({projectEmployees?.length || 0})</TabsTrigger>
             <TabsTrigger value="files"><FileText className="h-4 w-4 mr-1" /> Files ({files?.length || 0})</TabsTrigger>
           </TabsList>
 
@@ -290,7 +374,7 @@ export default function ProjectDetail() {
                       <TableCell><StatusBadge status={t.priority} variant={t.priority === "high" ? "danger" : t.priority === "medium" ? "warning" : "default"} /></TableCell>
                       <TableCell className="text-muted-foreground text-sm">{t.assigned_to || "—"}</TableCell>
                       <TableCell className="text-sm">{t.due_date || "—"}</TableCell>
-                      <TableCell><div className="flex gap-1"><Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => openEditTask(t)}><Pencil className="h-3 w-3" /></Button><Button size="sm" variant="outline" className="h-7 text-xs text-destructive" onClick={() => deleteTaskMutation.mutate(t.id)}><Trash2 className="h-3 w-3" /></Button></div></TableCell>
+                      <TableCell><div className="flex gap-1"><Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setTaskEmpDialog(t)}><Users2 className="h-3 w-3" /></Button><Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => openEditTask(t)}><Pencil className="h-3 w-3" /></Button><Button size="sm" variant="outline" className="h-7 text-xs text-destructive" onClick={() => deleteTaskMutation.mutate(t.id)}><Trash2 className="h-3 w-3" /></Button></div></TableCell>
                     </TableRow>
                   ))}
                   {(!tasks || tasks.length === 0) && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-6">No tasks yet.</TableCell></TableRow>}
@@ -361,6 +445,34 @@ export default function ProjectDetail() {
             </div>
           </TabsContent>
 
+          <TabsContent value="employees">
+            <div className="flex justify-end mb-4"><Button size="sm" onClick={() => { setEmpFormId(""); setEmpFormRole(""); setEmpDialog(true); }}><Plus className="h-4 w-4 mr-1" /> Add Employee</Button></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {projectEmployees?.map((pe: any) => {
+                const e = pe.employees;
+                return (
+                  <Card key={pe.id}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+                            <span className="text-xs font-bold text-primary">{e?.name?.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()}</span>
+                          </div>
+                          <div>
+                            <Link to={`/employees/${e?.id}`} className="font-semibold text-sm hover:text-primary">{e?.name}</Link>
+                            <p className="text-xs text-muted-foreground">{e?.role || "No role"}{pe.role ? ` · ${pe.role}` : ""}</p>
+                          </div>
+                        </div>
+                        <Button size="sm" variant="outline" className="h-7 text-xs text-destructive" onClick={() => removeProjectEmpMutation.mutate(pe.id)}><Trash2 className="h-3 w-3" /></Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+              {(!projectEmployees || projectEmployees.length === 0) && <p className="text-muted-foreground text-sm col-span-full text-center py-6">No employees assigned.</p>}
+            </div>
+          </TabsContent>
+
           <TabsContent value="files">
             <div className="flex justify-end mb-4">
               <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileUpload} />
@@ -424,6 +536,63 @@ export default function ProjectDetail() {
             <div><Label>Notes (optional)</Label><Textarea value={supplierForm.notes} onChange={e => setSupplierForm(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>
           </div>
           <DialogFooter><Button variant="outline" onClick={() => setSupplierDialog(false)}>Cancel</Button><Button onClick={() => addSupplierMutation.mutate()} disabled={!supplierForm.supplier_id}>Add Supplier</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Employee to Project Dialog */}
+      <Dialog open={empDialog} onOpenChange={setEmpDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Add Employee to Project</DialogTitle><DialogDescription>Select an employee to assign.</DialogDescription></DialogHeader>
+          <div className="space-y-4">
+            <div><Label>Employee</Label>
+              <Select value={empFormId} onValueChange={setEmpFormId}>
+                <SelectTrigger><SelectValue placeholder="Select employee" /></SelectTrigger>
+                <SelectContent>{employees?.filter((e: any) => !projectEmployees?.some((pe: any) => pe.employee_id === e.id)).map((e: any) => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div><Label>Role (optional)</Label><Input value={empFormRole} onChange={e => setEmpFormRole(e.target.value)} placeholder="e.g. Lead Developer" /></div>
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setEmpDialog(false)}>Cancel</Button><Button onClick={() => addProjectEmpMutation.mutate()} disabled={!empFormId}>Add Employee</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Employee to Task Dialog */}
+      <Dialog open={!!taskEmpDialog} onOpenChange={() => setTaskEmpDialog(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Assign Employees to "{taskEmpDialog?.title}"</DialogTitle><DialogDescription>Manage employee assignments.</DialogDescription></DialogHeader>
+          <div className="space-y-3">
+            {taskEmployees?.filter((te: any) => te.task_id === taskEmpDialog?.id).length > 0 && (
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Currently Assigned</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {taskEmployees?.filter((te: any) => te.task_id === taskEmpDialog?.id).map((te: any) => {
+                    const emp = employees?.find((e: any) => e.id === te.employee_id);
+                    return emp ? (
+                      <span key={te.id} className="inline-flex items-center gap-1 rounded-full border bg-accent/30 px-2.5 py-1 text-xs">
+                        {emp.name}
+                        <button onClick={() => unassignTaskEmpMutation.mutate(te.id)} className="text-muted-foreground hover:text-destructive"><X className="w-3 h-3" /></button>
+                      </span>
+                    ) : null;
+                  })}
+                </div>
+              </div>
+            )}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Add Employee</Label>
+              <div className="flex gap-2">
+                <Select value={taskEmpId} onValueChange={setTaskEmpId}>
+                  <SelectTrigger className="flex-1"><SelectValue placeholder="Select employee" /></SelectTrigger>
+                  <SelectContent>
+                    {employees?.filter((e: any) => !taskEmployees?.some((te: any) => te.task_id === taskEmpDialog?.id && te.employee_id === e.id)).map((e: any) => (
+                      <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button size="sm" disabled={!taskEmpId} onClick={() => taskEmpDialog && assignTaskEmpMutation.mutate({ task_id: taskEmpDialog.id, employee_id: taskEmpId })}>Add</Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setTaskEmpDialog(null)}>Done</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
