@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
+import ReferenceGenerator from "@/components/references/ReferenceGenerator";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -44,6 +45,7 @@ export default function ProjectDetail() {
   const [empFormId, setEmpFormId] = useState("");
   const [empFormRole, setEmpFormRole] = useState("");
   const [taskEmpId, setTaskEmpId] = useState("");
+  const [refDialog, setRefDialog] = useState(false);
 
   const { data: project } = useQuery({
     queryKey: ["project", id],
