@@ -415,6 +415,45 @@ export default function Employees() {
     }
   };
 
+  const handleExportAnalyticsImage = async () => {
+    if (!analyticsRef.current) return;
+    try {
+      toast.info("Generating image...");
+      const canvas = await html2canvas(analyticsRef.current, { backgroundColor: null, scale: 2, useCORS: true });
+      canvas.toBlob((blob) => {
+        if (blob) {
+          saveAs(blob, `employee_analytics_${format(new Date(), "yyyy-MM-dd")}.png`);
+          toast.success("Analytics exported as image");
+        }
+      }, "image/png");
+    } catch {
+      toast.error("Failed to export image");
+    }
+  };
+
+  const handleExportAnalyticsPDF = async () => {
+    if (!analyticsRef.current) return;
+    try {
+      toast.info("Generating PDF...");
+      const canvas = await html2canvas(analyticsRef.current, { backgroundColor: "#ffffff", scale: 2, useCORS: true });
+      const imgData = canvas.toDataURL("image/png");
+      // Create a simple printable page
+      const printWindow = window.open("", "_blank");
+      if (printWindow) {
+        printWindow.document.write(`
+          <html><head><title>Employee Analytics Report</title>
+          <style>body{margin:0;display:flex;justify-content:center;} img{max-width:100%;height:auto;}</style></head>
+          <body><img src="${imgData}" /></body></html>
+        `);
+        printWindow.document.close();
+        setTimeout(() => { printWindow.print(); }, 500);
+        toast.success("Analytics PDF ready for print");
+      }
+    } catch {
+      toast.error("Failed to export PDF");
+    }
+  };
+
   const handleExportTimeline = () => {
     try {
       const rows: Record<string, string>[] = [];
