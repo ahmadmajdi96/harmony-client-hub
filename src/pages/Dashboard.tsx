@@ -6,7 +6,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { FolderKanban, Users, FileText, ListChecks, TrendingUp, Clock, Activity, Truck, DollarSign, ArrowUpRight } from "lucide-react";
+import { FolderKanban, Users, ListChecks, TrendingUp, Clock, Activity, Truck, DollarSign, ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 
@@ -19,9 +19,9 @@ const statusVariant = (s: string) => {
 };
 
 const actionColors: Record<string, string> = {
-  created: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-  updated: "bg-violet-500/10 text-violet-600 border-violet-500/20",
-  deleted: "bg-red-500/10 text-red-600 border-red-500/20",
+  created: "bg-success/10 text-success",
+  updated: "bg-primary/10 text-primary",
+  deleted: "bg-destructive/10 text-destructive",
 };
 
 export default function Dashboard() {
@@ -47,14 +47,6 @@ export default function Dashboard() {
     queryKey: ["tasks-all"],
     queryFn: async () => {
       const { data } = await supabase.from("project_tasks").select("*");
-      return data || [];
-    },
-  });
-
-  const { data: files } = useQuery({
-    queryKey: ["files-all"],
-    queryFn: async () => {
-      const { data } = await supabase.from("project_files").select("*");
       return data || [];
     },
   });
@@ -92,8 +84,8 @@ export default function Dashboard() {
   return (
     <div>
       <PageHeader
-        title={`${greeting()}, ${user?.user_metadata?.full_name || "Engineer"}`}
-        subtitle="Here's what's happening across your projects today"
+        title={`${greeting()}, ${user?.user_metadata?.full_name || "there"} 👋`}
+        subtitle="Here's what's happening across your projects"
       />
       <div className="p-6 space-y-6">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -112,27 +104,26 @@ export default function Dashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-2 animate-fade-in border-0 shadow-sm" style={{ animationDelay: "100ms" }}>
+          <Card className="lg:col-span-2 animate-fade-in rounded-2xl border-border/60 shadow-sm" style={{ animationDelay: "100ms" }}>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-semibold flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
                     <TrendingUp className="h-4 w-4 text-primary" />
                   </div>
                   Recent Projects
                 </CardTitle>
-                <Link to="/projects" className="text-xs text-primary hover:underline flex items-center gap-1">View all <ArrowUpRight className="h-3 w-3" /></Link>
+                <Link to="/projects" className="text-xs text-primary hover:underline flex items-center gap-1 font-medium">View all <ArrowUpRight className="h-3 w-3" /></Link>
               </div>
             </CardHeader>
-            <CardContent className="space-y-2">
-              {projects?.slice(0, 5).map((p, i) => (
+            <CardContent className="space-y-1">
+              {projects?.slice(0, 5).map((p) => (
                 <Link key={p.id} to={`/projects/${p.id}`}
-                  className="flex items-center justify-between p-3.5 rounded-xl border border-transparent hover:border-primary/20 hover:bg-accent/50 transition-all duration-200 group"
-                  style={{ animationDelay: `${(i + 2) * 60}ms` }}>
+                  className="flex items-center justify-between p-3.5 rounded-xl hover:bg-accent/50 transition-all duration-200 group">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="font-medium text-sm truncate group-hover:text-primary transition-colors">{p.name}</p>
-                      <span className="text-[10px] font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{p.reference_number}</span>
+                      <span className="text-[10px] font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md">{p.reference_number}</span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">{(p as any).clients?.name || "No client"}</p>
                   </div>
@@ -151,23 +142,23 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="animate-fade-in border-0 shadow-sm" style={{ animationDelay: "200ms" }}>
+          <Card className="animate-fade-in rounded-2xl border-border/60 shadow-sm" style={{ animationDelay: "200ms" }}>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-semibold flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
                     <Activity className="h-4 w-4 text-primary" />
                   </div>
                   Activity
                 </CardTitle>
-                <Link to="/activity" className="text-xs text-primary hover:underline flex items-center gap-1">View all <ArrowUpRight className="h-3 w-3" /></Link>
+                <Link to="/activity" className="text-xs text-primary hover:underline flex items-center gap-1 font-medium">View all <ArrowUpRight className="h-3 w-3" /></Link>
               </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 {recentActivity?.map(log => (
                   <div key={log.id} className="flex items-start gap-3 group">
-                    <div className={`h-7 w-7 rounded-lg border flex items-center justify-center shrink-0 text-[10px] font-bold ${actionColors[log.action] || "bg-muted text-muted-foreground border-border"}`}>
+                    <div className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 text-[10px] font-bold ${actionColors[log.action] || "bg-muted text-muted-foreground"}`}>
                       {log.action[0].toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -184,22 +175,22 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        <Card className="animate-fade-in border-0 shadow-sm" style={{ animationDelay: "300ms" }}>
+        <Card className="animate-fade-in rounded-2xl border-border/60 shadow-sm" style={{ animationDelay: "300ms" }}>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-warning/10 flex items-center justify-center">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <div className="h-8 w-8 rounded-xl bg-warning/10 flex items-center justify-center">
                   <Clock className="h-4 w-4 text-warning" />
                 </div>
                 Pending Tasks
               </CardTitle>
-              <Link to="/tasks" className="text-xs text-primary hover:underline flex items-center gap-1">View all <ArrowUpRight className="h-3 w-3" /></Link>
+              <Link to="/tasks" className="text-xs text-primary hover:underline flex items-center gap-1 font-medium">View all <ArrowUpRight className="h-3 w-3" /></Link>
             </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {tasks?.filter(t => t.status !== "done").slice(0, 6).map(t => (
-                <div key={t.id} className="flex items-center justify-between p-3.5 rounded-xl border hover:border-primary/20 hover:shadow-sm transition-all duration-200">
+                <div key={t.id} className="flex items-center justify-between p-3.5 rounded-xl border border-border/60 hover:shadow-sm transition-all duration-200">
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-sm truncate">{t.title}</p>
                     <p className="text-xs text-muted-foreground">{t.due_date ? `Due: ${t.due_date}` : "No due date"}</p>
