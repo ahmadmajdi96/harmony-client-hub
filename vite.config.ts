@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    allowedHosts: ["corta.pm.dashboard.cortanexai.com"],
     hmr: {
       overlay: false,
     },
