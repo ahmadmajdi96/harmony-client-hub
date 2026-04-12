@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Upload, Trash2, Pencil, Download, FileText, ListChecks, Truck, Calendar, DollarSign, Hash, Users, BarChart3 } from "lucide-react";
+import { Plus, Upload, Trash2, Pencil, Download, FileText, ListChecks, Truck, Calendar, DollarSign, Hash, Users, BarChart3, Building } from "lucide-react";
 
 const statusVariant = (s: string) => {
   if (s === "done" || s === "completed") return "success" as const;
@@ -37,6 +37,8 @@ export default function ProjectDetail() {
   const [uploading, setUploading] = useState(false);
   const [supplierDialog, setSupplierDialog] = useState(false);
   const [supplierForm, setSupplierForm] = useState({ supplier_id: "", role: "", notes: "" });
+  const [clientDialog, setClientDialog] = useState(false);
+  const [clientForm, setClientForm] = useState({ client_id: "", role: "", notes: "" });
 
   const { data: project } = useQuery({
     queryKey: ["project", id],
@@ -74,11 +76,57 @@ export default function ProjectDetail() {
     enabled: !!id,
   });
 
+  const { data: projectClients } = useQuery({
+    queryKey: ["project-clients", id],
+    queryFn: async () => {
+      const { data } = await supabase.from("project_clients").select("*, clients(*)").eq("project_id", id!);
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
+  const { data: allClients } = useQuery({
+    queryKey: ["clients-list"],
+    queryFn: async () => {
+      const { data } = await supabase.from("clients").select("id, name, reference_number");
+      return data || [];
+    },
+  });
+
   const { data: allSuppliers } = useQuery({
     queryKey: ["suppliers-list"],
     queryFn: async () => {
       const { data } = await supabase.from("suppliers").select("id, name, reference_number");
       return data || [];
+    },
+  });
+
+  const addClientMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("project_clients").insert({
+        project_id: id!,
+        client_id: clientForm.client_id,
+        role: clientForm.role || null,
+        notes: clientForm.notes || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project-clients", id] });
+      toast({ title: "Client added to project" });
+      setClientDialog(false);
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const removeClientMutation = useMutation({
+    mutationFn: async (pcId: string) => {
+      const { error } = await supabase.from("project_clients").delete().eq("id", pcId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project-clients", id] });
+      toast({ title: "Client removed", variant: "destructive" });
     },
   });
 
@@ -224,6 +272,7 @@ export default function ProjectDetail() {
         <Tabs defaultValue="tasks">
           <TabsList>
             <TabsTrigger value="tasks"><ListChecks className="h-4 w-4 mr-1" /> Tasks ({totalTasks})</TabsTrigger>
+            <TabsTrigger value="clients"><Building className="h-4 w-4 mr-1" /> Clients ({projectClients?.length || 0})</TabsTrigger>
             <TabsTrigger value="suppliers"><Truck className="h-4 w-4 mr-1" /> Suppliers ({projectSuppliers?.length || 0})</TabsTrigger>
             <TabsTrigger value="files"><FileText className="h-4 w-4 mr-1" /> Files ({files?.length || 0})</TabsTrigger>
           </TabsList>
@@ -248,6 +297,37 @@ export default function ProjectDetail() {
                 </TableBody>
               </Table>
             </CardContent></Card>
+          </TabsContent>
+
+          <TabsContent value="clients">
+            <div className="flex justify-end mb-4"><Button size="sm" onClick={() => { setClientForm({ client_id: "", role: "", notes: "" }); setClientDialog(true); }}><Plus className="h-4 w-4 mr-1" /> Add Client</Button></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {projectClients?.map(pc => {
+                const c = (pc as any).clients;
+                return (
+                  <Card key={pc.id}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-sm">{c?.name}</h3>
+                            <span className="text-xs font-mono text-muted-foreground">{c?.reference_number}</span>
+                          </div>
+                          {c?.company && <p className="text-xs text-muted-foreground">{c.company}</p>}
+                          {pc.role && <StatusBadge status={pc.role} variant="info" />}
+                          {pc.notes && <p className="text-xs text-muted-foreground mt-1">{pc.notes}</p>}
+                        </div>
+                        <div className="flex gap-1">
+                          <Button size="sm" variant="outline" className="h-7 text-xs" asChild><Link to={`/clients/${pc.client_id}`}>View</Link></Button>
+                          <Button size="sm" variant="outline" className="h-7 text-xs text-destructive" onClick={() => removeClientMutation.mutate(pc.id)}><Trash2 className="h-3 w-3" /></Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+              {(!projectClients || projectClients.length === 0) && <p className="text-muted-foreground text-sm col-span-full text-center py-6">No clients assigned.</p>}
+            </div>
           </TabsContent>
 
           <TabsContent value="suppliers">
@@ -344,6 +424,23 @@ export default function ProjectDetail() {
             <div><Label>Notes (optional)</Label><Textarea value={supplierForm.notes} onChange={e => setSupplierForm(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>
           </div>
           <DialogFooter><Button variant="outline" onClick={() => setSupplierDialog(false)}>Cancel</Button><Button onClick={() => addSupplierMutation.mutate()} disabled={!supplierForm.supplier_id}>Add Supplier</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={clientDialog} onOpenChange={setClientDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Add Client to Project</DialogTitle><DialogDescription>Select a client to assign.</DialogDescription></DialogHeader>
+          <div className="space-y-4">
+            <div><Label>Client</Label>
+              <Select value={clientForm.client_id} onValueChange={v => setClientForm(f => ({ ...f, client_id: v }))}>
+                <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
+                <SelectContent>{allClients?.filter(c => !projectClients?.some(pc => pc.client_id === c.id)).map(c => <SelectItem key={c.id} value={c.id}>{c.name} ({c.reference_number})</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div><Label>Role (optional)</Label><Input value={clientForm.role} onChange={e => setClientForm(f => ({ ...f, role: e.target.value }))} placeholder="e.g. Primary Client" /></div>
+            <div><Label>Notes (optional)</Label><Textarea value={clientForm.notes} onChange={e => setClientForm(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setClientDialog(false)}>Cancel</Button><Button onClick={() => addClientMutation.mutate()} disabled={!clientForm.client_id}>Add Client</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

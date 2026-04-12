@@ -29,11 +29,20 @@ export default function ClientDetail() {
     enabled: !!id,
   });
 
+  // Fetch projects linked via both legacy client_id and project_clients junction
   const { data: projects } = useQuery({
     queryKey: ["client-projects", id],
     queryFn: async () => {
-      const { data } = await supabase.from("projects").select("*").eq("client_id", id!).order("created_at", { ascending: false });
-      return data || [];
+      // Get projects from junction table
+      const { data: linked } = await supabase.from("project_clients").select("projects(*)").eq("client_id", id!);
+      // Get projects from legacy client_id
+      const { data: legacy } = await supabase.from("projects").select("*").eq("client_id", id!);
+      const junctionProjects = (linked || []).map((l: any) => l.projects).filter(Boolean);
+      const legacyProjects = legacy || [];
+      // Merge and deduplicate by id
+      const map = new Map<string, any>();
+      [...legacyProjects, ...junctionProjects].forEach(p => map.set(p.id, p));
+      return Array.from(map.values()).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     },
     enabled: !!id,
   });
