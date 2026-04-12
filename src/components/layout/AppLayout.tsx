@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, FolderKanban, Users, FileText, ListChecks,
   ChevronLeft, BarChart3, Truck, Activity, Download, Users2,
-  LogOut, ChevronsLeftRight, Menu, X, Bot,
+  LogOut, ChevronsLeftRight, Menu, X, Bot, Hash,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -24,6 +24,7 @@ const navItems = [
   { path: "/reports", label: "Reports", icon: BarChart3 },
   { path: "/export", label: "Data Export", icon: Download },
   { path: "/employees", label: "Employees", icon: Users2 },
+  { path: "/references", label: "Doc References", icon: Hash },
   { path: "/ai", label: "AI Intelligence", icon: Bot },
 ];
 
