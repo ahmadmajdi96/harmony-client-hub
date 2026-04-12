@@ -10,7 +10,7 @@ import { FolderKanban, Users, ListChecks, TrendingUp, Clock, Activity, Truck, Do
 import { Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
-import cortaLogo from "@/assets/corta-logo.png";
+
 
 const statusVariant = (s: string) => {
   if (s === "completed" || s === "active" || s === "done") return "success" as const;
@@ -114,11 +114,6 @@ export default function Dashboard() {
         subtitle="Here's what's happening across your projects"
       />
       <div className="p-6 space-y-6">
-        {/* Powered by Cortanex AI banner */}
-        <div className="flex items-center justify-center gap-2 py-2">
-          <img src={cortaLogo} alt="Cortanex AI" className="h-6 w-6 object-contain" />
-          <span className="text-xs text-muted-foreground/70">Powered by <span className="font-semibold text-muted-foreground">Cortanex AI</span></span>
-        </div>
 
         <motion.div
           variants={containerVariants}
