@@ -59,15 +59,28 @@ export default function ReferenceGenerator({ onGenerated }: Props) {
         const { data: clients } = await supabase.from("clients").select("id, name");
         const clientMap = new Map((clients || []).map(c => [c.id, c.name]));
         
-        setProjects(data.map(p => ({
+        const mapped = data.map(p => ({
           id: p.id,
           name: p.name,
           client_name: p.client_id ? clientMap.get(p.client_id) || undefined : undefined,
-        })));
+        }));
+        setProjects(mapped);
+
+        // Auto-select if preselected via URL
+        if (preselectedProjectId) {
+          const proj = mapped.find(p => p.id === preselectedProjectId);
+          if (proj) {
+            setSelectedProjectId(proj.id);
+            setProjectName(proj.name);
+            if (proj.client_name) {
+              setClient(proj.client_name);
+            }
+          }
+        }
       }
     };
     loadProjects();
-  }, []);
+  }, [preselectedProjectId]);
 
   const handleProjectSelect = (projectId: string) => {
     const proj = projects.find(p => p.id === projectId);
