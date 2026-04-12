@@ -1,14 +1,16 @@
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { EmbeddedChat } from "@/components/chat/EmbeddedChat";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Bot, BarChart3, Loader2, RefreshCw, TrendingUp, Users2, ListChecks, FolderKanban, AlertTriangle, CheckCircle2 } from "lucide-react";
-import ReactMarkdown from "react-markdown";
+import { Bot, BarChart3, Loader2, RefreshCw, TrendingUp, Users2, ListChecks, FolderKanban, AlertTriangle, CheckCircle2, FileText, Calendar, Play } from "lucide-react";
+import { MarkdownRenderer } from "@/components/shared/MarkdownRenderer";
 import { motion } from "framer-motion";
+import { formatDistanceToNow } from "date-fns";
+import { toast } from "sonner";
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/system-chat`;
 
@@ -157,13 +159,152 @@ function AnalysisCardComponent({ card }: { card: AnalysisCard }) {
             </div>
           )}
           {content && (
-            <div className="prose prose-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_p]:my-1.5 [&_ul]:my-1.5 [&_ol]:my-1.5 [&_li]:my-0.5 [&_table]:text-xs [&_table]:my-2 [&_table]:w-full [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left [&_th]:border-b [&_th]:border-border [&_th]:bg-muted/50 [&_td]:px-2 [&_td]:py-1.5 [&_td]:border-b [&_td]:border-border/40 [&_code]:text-xs [&_code]:bg-muted/60 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_pre]:bg-muted/60 [&_pre]:p-3 [&_pre]:rounded-lg [&_h1]:text-base [&_h1]:font-bold [&_h2]:text-sm [&_h2]:font-semibold [&_h3]:text-sm [&_h3]:font-medium [&_blockquote]:border-primary/30 [&_blockquote]:bg-primary/5 [&_blockquote]:px-3 [&_blockquote]:py-1 [&_blockquote]:rounded-r-lg [&_hr]:my-3 [&_strong]:text-foreground">
-              <ReactMarkdown>{content}</ReactMarkdown>
-            </div>
+            <MarkdownRenderer content={content} />
           )}
         </CardContent>
       )}
     </Card>
+  );
+}
+
+function WeeklyReportsTab() {
+  const queryClient = useQueryClient();
+
+  const { data: pastReports, isLoading: reportsLoading } = useQuery({
+    queryKey: ["weekly-reports"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("activity_log")
+        .select("*")
+        .eq("entity_type", "report")
+        .eq("action", "created")
+        .order("created_at", { ascending: false })
+        .limit(10);
+      return data || [];
+    },
+  });
+
+  const generateMutation = useMutation({
+    mutationFn: async () => {
+      const resp = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/weekly-report`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ time: "manual" }),
+        }
+      );
+      if (!resp.ok) throw new Error("Failed to generate report");
+      return resp.json();
+    },
+    onSuccess: () => {
+      toast.success("Weekly report generated successfully!");
+      queryClient.invalidateQueries({ queryKey: ["weekly-reports"] });
+    },
+    onError: (e: any) => {
+      toast.error(e.message || "Failed to generate report");
+    },
+  });
+
+  const [expandedReport, setExpandedReport] = useState<string | null>(null);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-4"
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <FileText className="h-5 w-5 text-primary" />
+          <div>
+            <p className="text-sm font-medium">Automated Weekly Reports</p>
+            <p className="text-xs text-muted-foreground">
+              Scheduled every Monday at 8:00 AM UTC. You can also generate one manually.
+            </p>
+          </div>
+        </div>
+        <Button
+          onClick={() => generateMutation.mutate()}
+          disabled={generateMutation.isPending}
+          className="gap-2 rounded-xl"
+        >
+          {generateMutation.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Play className="h-4 w-4" />
+          )}
+          Generate Now
+        </Button>
+      </div>
+
+      {/* Live report result */}
+      {generateMutation.data?.report && (
+        <Card className="rounded-2xl border-primary/20 shadow-md">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                <FileText className="h-4 w-4" />
+              </div>
+              Latest Report — Just Generated
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <MarkdownRenderer content={generateMutation.data.report} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Past reports */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-muted-foreground">Past Reports</h3>
+        {reportsLoading && (
+          <div className="flex items-center gap-2 py-8 justify-center text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span className="text-sm">Loading reports...</span>
+          </div>
+        )}
+        {pastReports?.length === 0 && !reportsLoading && (
+          <p className="text-sm text-muted-foreground text-center py-8">
+            No reports yet. Click "Generate Now" or wait for the weekly schedule.
+          </p>
+        )}
+        {pastReports?.map((report: any) => {
+          const isExpanded = expandedReport === report.id;
+          const reportContent = (report.new_values as any)?.report;
+          return (
+            <Card
+              key={report.id}
+              className="rounded-2xl border-border/40 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => setExpandedReport(isExpanded ? null : report.id)}
+            >
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2.5">
+                    <div className="h-7 w-7 rounded-lg bg-muted/50 flex items-center justify-center">
+                      <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                    </div>
+                    {report.description}
+                  </CardTitle>
+                  <span className="text-xs text-muted-foreground">
+                    {formatDistanceToNow(new Date(report.created_at), { addSuffix: true })}
+                  </span>
+                </div>
+              </CardHeader>
+              {isExpanded && reportContent && (
+                <CardContent>
+                  <MarkdownRenderer content={reportContent} />
+                </CardContent>
+              )}
+            </Card>
+          );
+        })}
+      </div>
+    </motion.div>
   );
 }
 
@@ -184,6 +325,10 @@ export default function AIPage() {
             <TabsTrigger value="chat" className="rounded-lg gap-2 data-[state=active]:shadow-sm">
               <Bot className="h-4 w-4" />
               Chat Assistant
+            </TabsTrigger>
+            <TabsTrigger value="reports" className="rounded-lg gap-2 data-[state=active]:shadow-sm">
+              <FileText className="h-4 w-4" />
+              Weekly Reports
             </TabsTrigger>
           </TabsList>
 
@@ -216,6 +361,10 @@ export default function AIPage() {
             >
               <EmbeddedChat className="h-[calc(100vh-220px)]" />
             </motion.div>
+          </TabsContent>
+
+          <TabsContent value="reports">
+            <WeeklyReportsTab />
           </TabsContent>
         </Tabs>
       </div>
