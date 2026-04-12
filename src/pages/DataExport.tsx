@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -15,14 +15,14 @@ import {
 } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
+import { format, startOfDay, endOfDay } from "date-fns";
 import {
   Search, Download, CalendarIcon, FolderKanban, Users, Truck,
-  ListChecks, Filter, FileSpreadsheet, X, BarChart3,
+  ListChecks, Filter, FileSpreadsheet, X, BarChart3, Columns3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
-import * as XLSX from "xlsx";
+import { utils, writeFileXLSX } from "xlsx";
 
 type EntityType = "projects" | "clients" | "suppliers" | "tasks";
 
@@ -41,9 +41,11 @@ const ENTITY_COLUMNS: Record<EntityType, { key: string; label: string }[]> = {
     { key: "priority", label: "Priority" },
     { key: "progress", label: "Progress" },
     { key: "budget", label: "Budget" },
+    { key: "description", label: "Description" },
     { key: "start_date", label: "Start Date" },
     { key: "end_date", label: "End Date" },
     { key: "created_at", label: "Created" },
+    { key: "updated_at", label: "Updated" },
   ],
   clients: [
     { key: "reference_number", label: "Ref" },
@@ -53,7 +55,9 @@ const ENTITY_COLUMNS: Record<EntityType, { key: string; label: string }[]> = {
     { key: "phone", label: "Phone" },
     { key: "status", label: "Status" },
     { key: "address", label: "Address" },
+    { key: "notes", label: "Notes" },
     { key: "created_at", label: "Created" },
+    { key: "updated_at", label: "Updated" },
   ],
   suppliers: [
     { key: "reference_number", label: "Ref" },
@@ -64,7 +68,10 @@ const ENTITY_COLUMNS: Record<EntityType, { key: string; label: string }[]> = {
     { key: "phone", label: "Phone" },
     { key: "status", label: "Status" },
     { key: "website", label: "Website" },
+    { key: "address", label: "Address" },
+    { key: "notes", label: "Notes" },
     { key: "created_at", label: "Created" },
+    { key: "updated_at", label: "Updated" },
   ],
   tasks: [
     { key: "title", label: "Title" },
@@ -74,6 +81,7 @@ const ENTITY_COLUMNS: Record<EntityType, { key: string; label: string }[]> = {
     { key: "due_date", label: "Due Date" },
     { key: "description", label: "Description" },
     { key: "created_at", label: "Created" },
+    { key: "updated_at", label: "Updated" },
   ],
 };
 
@@ -83,6 +91,12 @@ export default function DataExport() {
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [selectedColumns, setSelectedColumns] = useState<Set<string>>(new Set());
+
+  // Initialize selected columns when entity changes
+  useEffect(() => {
+    setSelectedColumns(new Set(ENTITY_COLUMNS[entity].map(c => c.key)));
+  }, [entity]);
 
   const { data: projects } = useQuery({
     queryKey: ["projects"],
@@ -142,7 +156,29 @@ export default function DataExport() {
     return items;
   }, [entity, search, statusFilter, dateFrom, dateTo, rawData[entity]]);
 
-  const columns = ENTITY_COLUMNS[entity];
+  const allColumns = ENTITY_COLUMNS[entity];
+  const activeColumns = allColumns.filter(c => selectedColumns.has(c.key));
+
+  const toggleColumn = (key: string) => {
+    setSelectedColumns(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        if (next.size > 1) next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  const toggleAllColumns = () => {
+    if (selectedColumns.size === allColumns.length) {
+      // Keep at least the first column
+      setSelectedColumns(new Set([allColumns[0].key]));
+    } else {
+      setSelectedColumns(new Set(allColumns.map(c => c.key)));
+    }
+  };
 
   const formatCellValue = (val: any, key: string) => {
     if (val == null) return "—";
@@ -164,45 +200,48 @@ export default function DataExport() {
   const hasActiveFilters = search || dateFrom || dateTo || statusFilter !== "all";
 
   const handleDownload = () => {
-    const exportData = filteredData.map((item: any) => {
-      const row: Record<string, any> = {};
-      columns.forEach(col => {
-        row[col.label] = formatCellValue(item[col.key], col.key);
+    try {
+      const exportData = filteredData.map((item: any) => {
+        const row: Record<string, any> = {};
+        activeColumns.forEach(col => {
+          row[col.label] = formatCellValue(item[col.key], col.key);
+        });
+        return row;
       });
-      if (item.notes) row["Notes"] = item.notes;
-      if (item.description && !columns.find(c => c.key === "description")) row["Description"] = item.description;
-      return row;
-    });
 
-    const ws = XLSX.utils.json_to_sheet(exportData);
+      if (exportData.length === 0) return;
 
-    // Auto-size columns
-    const colWidths = Object.keys(exportData[0] || {}).map(key => ({
-      wch: Math.max(key.length, ...exportData.map(r => String(r[key] || "").length)).valueOf() + 2,
-    }));
-    ws["!cols"] = colWidths;
+      const ws = utils.json_to_sheet(exportData);
 
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, ENTITY_CONFIG[entity].label);
+      // Auto-size columns
+      const keys = Object.keys(exportData[0] || {});
+      ws["!cols"] = keys.map(key => ({
+        wch: Math.max(key.length, ...exportData.map(r => String(r[key] || "").length)) + 2,
+      }));
 
-    // Add metadata sheet
-    const meta = [
-      { Field: "Entity", Value: ENTITY_CONFIG[entity].label },
-      { Field: "Total Records", Value: String(filteredData.length) },
-      { Field: "Export Date", Value: format(new Date(), "PPP p") },
-      { Field: "Search Filter", Value: search || "None" },
-      { Field: "Status Filter", Value: statusFilter === "all" ? "All" : statusFilter },
-      { Field: "Date From", Value: dateFrom ? format(dateFrom, "PPP") : "Not set" },
-      { Field: "Date To", Value: dateTo ? format(dateTo, "PPP") : "Not set" },
-    ];
-    const metaWs = XLSX.utils.json_to_sheet(meta);
-    metaWs["!cols"] = [{ wch: 16 }, { wch: 40 }];
-    XLSX.utils.book_append_sheet(wb, metaWs, "Export Info");
+      const wb = utils.book_new();
+      utils.book_append_sheet(wb, ws, ENTITY_CONFIG[entity].label);
 
-    XLSX.writeFile(wb, `${entity}_export_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
+      // Add metadata sheet
+      const meta = [
+        { Field: "Entity", Value: ENTITY_CONFIG[entity].label },
+        { Field: "Total Records", Value: String(filteredData.length) },
+        { Field: "Columns Exported", Value: activeColumns.map(c => c.label).join(", ") },
+        { Field: "Export Date", Value: format(new Date(), "PPP p") },
+        { Field: "Search Filter", Value: search || "None" },
+        { Field: "Status Filter", Value: statusFilter === "all" ? "All" : statusFilter },
+        { Field: "Date From", Value: dateFrom ? format(dateFrom, "PPP") : "Not set" },
+        { Field: "Date To", Value: dateTo ? format(dateTo, "PPP") : "Not set" },
+      ];
+      const metaWs = utils.json_to_sheet(meta);
+      metaWs["!cols"] = [{ wch: 18 }, { wch: 60 }];
+      utils.book_append_sheet(wb, metaWs, "Export Info");
+
+      writeFileXLSX(wb, `${entity}_export_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
+    } catch (e) {
+      console.error("Export failed:", e);
+    }
   };
-
-  const Icon = ENTITY_CONFIG[entity].icon;
 
   return (
     <div>
@@ -264,7 +303,6 @@ export default function DataExport() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Search */}
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Search</Label>
                 <div className="relative">
@@ -278,7 +316,6 @@ export default function DataExport() {
                 </div>
               </div>
 
-              {/* Status */}
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Status</Label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -286,13 +323,12 @@ export default function DataExport() {
                   <SelectContent>
                     <SelectItem value="all">All Statuses</SelectItem>
                     {allStatuses.map(s => (
-                      <SelectItem key={s} value={s}>{s.replace(/_/g, " ")}</SelectItem>
+                      <SelectItem key={s} value={s} className="capitalize">{s.replace(/_/g, " ")}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              {/* Date From */}
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">From Date</Label>
                 <Popover>
@@ -308,7 +344,6 @@ export default function DataExport() {
                 </Popover>
               </div>
 
-              {/* Date To */}
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">To Date</Label>
                 <Popover>
@@ -327,6 +362,45 @@ export default function DataExport() {
           </CardContent>
         </Card>
 
+        {/* Column Selector */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Columns3 className="w-4 h-4 text-primary" />
+              Export Columns
+              <span className="text-xs font-normal text-muted-foreground ml-1">
+                ({selectedColumns.size} of {allColumns.length} selected)
+              </span>
+              <Button variant="ghost" size="sm" className="ml-auto h-7 text-xs" onClick={toggleAllColumns}>
+                {selectedColumns.size === allColumns.length ? "Deselect All" : "Select All"}
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {allColumns.map(col => (
+                <button
+                  key={col.key}
+                  onClick={() => toggleColumn(col.key)}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all",
+                    selectedColumns.has(col.key)
+                      ? "border-primary/30 bg-primary/5 text-primary"
+                      : "border-border bg-card text-muted-foreground hover:border-primary/20"
+                  )}
+                >
+                  <Checkbox
+                    checked={selectedColumns.has(col.key)}
+                    className="h-3.5 w-3.5 pointer-events-none"
+                    tabIndex={-1}
+                  />
+                  {col.label}
+                </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Filter Overview */}
         <AnimatePresence>
           {hasActiveFilters && (
@@ -335,10 +409,26 @@ export default function DataExport() {
                 <CardContent className="py-3 px-4">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-xs font-medium text-muted-foreground">Active Filters:</span>
-                    {search && <Badge variant="secondary" className="text-xs">{`Search: "${search}"`}</Badge>}
-                    {statusFilter !== "all" && <Badge variant="secondary" className="text-xs">Status: {statusFilter.replace(/_/g, " ")}</Badge>}
-                    {dateFrom && <Badge variant="secondary" className="text-xs">From: {format(dateFrom, "MMM d, yyyy")}</Badge>}
-                    {dateTo && <Badge variant="secondary" className="text-xs">To: {format(dateTo, "MMM d, yyyy")}</Badge>}
+                    {search && (
+                      <span className="inline-flex items-center rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs font-semibold">
+                        Search: &quot;{search}&quot;
+                      </span>
+                    )}
+                    {statusFilter !== "all" && (
+                      <span className="inline-flex items-center rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs font-semibold capitalize">
+                        Status: {statusFilter.replace(/_/g, " ")}
+                      </span>
+                    )}
+                    {dateFrom && (
+                      <span className="inline-flex items-center rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs font-semibold">
+                        From: {format(dateFrom, "MMM d, yyyy")}
+                      </span>
+                    )}
+                    {dateTo && (
+                      <span className="inline-flex items-center rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs font-semibold">
+                        To: {format(dateTo, "MMM d, yyyy")}
+                      </span>
+                    )}
                     <span className="ml-auto text-xs text-muted-foreground">
                       Showing <span className="font-semibold text-foreground">{filteredData.length}</span> of {rawData[entity].length} records
                     </span>
@@ -360,10 +450,8 @@ export default function DataExport() {
             <div className="text-2xl font-bold mt-1 text-primary">{filteredData.length}</div>
           </Card>
           <Card className="p-4">
-            <div className="text-xs text-muted-foreground">Active Filters</div>
-            <div className="text-2xl font-bold mt-1">
-              {[search, statusFilter !== "all", dateFrom, dateTo].filter(Boolean).length}
-            </div>
+            <div className="text-xs text-muted-foreground">Columns Selected</div>
+            <div className="text-2xl font-bold mt-1">{selectedColumns.size}</div>
           </Card>
           <Card className="p-4 flex items-center justify-center">
             <Button onClick={handleDownload} disabled={filteredData.length === 0} className="w-full gap-2">
@@ -379,7 +467,9 @@ export default function DataExport() {
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <FileSpreadsheet className="w-4 h-4 text-primary" />
               Data Preview
-              <Badge variant="outline" className="ml-2 text-xs">{filteredData.length} rows</Badge>
+              <span className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs font-semibold ml-2">
+                {filteredData.length} rows × {activeColumns.length} cols
+              </span>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -387,7 +477,7 @@ export default function DataExport() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/30">
-                    {columns.map(col => (
+                    {activeColumns.map(col => (
                       <TableHead key={col.key} className="text-xs font-semibold whitespace-nowrap">{col.label}</TableHead>
                     ))}
                   </TableRow>
@@ -395,7 +485,7 @@ export default function DataExport() {
                 <TableBody>
                   {filteredData.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={columns.length} className="text-center py-12 text-muted-foreground">
+                      <TableCell colSpan={activeColumns.length} className="text-center py-12 text-muted-foreground">
                         <BarChart3 className="w-8 h-8 mx-auto mb-2 opacity-40" />
                         No records match the current filters
                       </TableCell>
@@ -403,21 +493,21 @@ export default function DataExport() {
                   ) : (
                     filteredData.slice(0, 50).map((item: any, i: number) => (
                       <TableRow key={item.id || i}>
-                        {columns.map(col => (
+                        {activeColumns.map(col => (
                           <TableCell key={col.key} className="text-xs whitespace-nowrap max-w-[200px] truncate">
                             {col.key === "status" ? (
-                              <Badge variant="outline" className="text-[10px] capitalize">{String(item[col.key] || "").replace(/_/g, " ")}</Badge>
+                              <span className="inline-flex items-center rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold capitalize">
+                                {String(item[col.key] || "").replace(/_/g, " ")}
+                              </span>
                             ) : col.key === "priority" ? (
-                              <Badge
-                                variant="outline"
-                                className={cn("text-[10px] capitalize",
-                                  item[col.key] === "high" && "border-destructive/40 text-destructive",
-                                  item[col.key] === "medium" && "border-amber-400/40 text-amber-600",
-                                  item[col.key] === "low" && "border-muted-foreground/40"
-                                )}
-                              >
+                              <span className={cn(
+                                "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold capitalize",
+                                item[col.key] === "high" && "border-destructive/40 text-destructive",
+                                item[col.key] === "medium" && "border-accent text-accent-foreground",
+                                item[col.key] === "low" && "border-muted text-muted-foreground"
+                              )}>
                                 {item[col.key]}
-                              </Badge>
+                              </span>
                             ) : (
                               formatCellValue(item[col.key], col.key)
                             )}
