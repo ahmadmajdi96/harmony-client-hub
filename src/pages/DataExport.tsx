@@ -263,7 +263,7 @@ export default function DataExport() {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
 
-      saveAs(blob, filename);
+      downloadBlob(blob, filename);
       toast.success("Excel file generated", {
         description: `${filteredData.length} ${ENTITY_CONFIG[entity].label.toLowerCase()} exported.`,
       });

@@ -26,9 +26,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { saveAs } from "file-saver";
+import { downloadBlob } from "@/lib/download";
 import { utils, write } from "xlsx";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -70,9 +71,9 @@ const CHART_COLORS = [
   "hsl(var(--warning))",
   "hsl(var(--destructive))",
   "hsl(var(--info))",
-  "hsl(252 56% 70%)",
-  "hsl(36 90% 65%)",
-  "hsl(152 60% 55%)",
+  "hsl(var(--accent))",
+  "hsl(var(--secondary))",
+  "hsl(var(--muted))",
 ];
 
 export default function Employees() {
@@ -420,14 +421,16 @@ export default function Employees() {
     try {
       toast.info("Generating image...");
       const canvas = await html2canvas(analyticsRef.current, { backgroundColor: null, scale: 2, useCORS: true });
-      canvas.toBlob((blob) => {
-        if (blob) {
-          saveAs(blob, `employee_analytics_${format(new Date(), "yyyy-MM-dd")}.png`);
-          toast.success("Analytics exported as image");
-        }
-      }, "image/png");
-    } catch {
-      toast.error("Failed to export image");
+      const blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob(resolve, "image/png");
+      });
+      if (!blob) throw new Error("Could not create image file");
+      downloadBlob(blob, `employee_analytics_${format(new Date(), "yyyy-MM-dd")}.png`);
+      toast.success("Analytics exported as image");
+    } catch (error) {
+      toast.error("Failed to export image", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
     }
   };
 
@@ -437,20 +440,15 @@ export default function Employees() {
       toast.info("Generating PDF...");
       const canvas = await html2canvas(analyticsRef.current, { backgroundColor: "#ffffff", scale: 2, useCORS: true });
       const imgData = canvas.toDataURL("image/png");
-      // Create a simple printable page
-      const printWindow = window.open("", "_blank");
-      if (printWindow) {
-        printWindow.document.write(`
-          <html><head><title>Employee Analytics Report</title>
-          <style>body{margin:0;display:flex;justify-content:center;} img{max-width:100%;height:auto;}</style></head>
-          <body><img src="${imgData}" /></body></html>
-        `);
-        printWindow.document.close();
-        setTimeout(() => { printWindow.print(); }, 500);
-        toast.success("Analytics PDF ready for print");
-      }
-    } catch {
-      toast.error("Failed to export PDF");
+      const pdf = new jsPDF({ orientation: "landscape", unit: "px", format: [canvas.width, canvas.height] });
+      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
+      const pdfBlob = pdf.output("blob");
+      downloadBlob(pdfBlob, `employee_analytics_${format(new Date(), "yyyy-MM-dd")}.pdf`);
+      toast.success("Analytics exported as PDF");
+    } catch (error) {
+      toast.error("Failed to export PDF", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
     }
   };
 
@@ -479,7 +477,8 @@ export default function Employees() {
       const wb = utils.book_new();
       utils.book_append_sheet(wb, ws, "Employee Tasks");
       const buf = write(wb, { bookType: "xlsx", type: "array" }) as ArrayBuffer;
-      saveAs(new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), `employee_tasks_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
+      const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      downloadBlob(blob, `employee_tasks_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
       toast.success("Timeline exported", { description: `${rows.length} task records exported.` });
     } catch (e) {
       toast.error("Export failed");

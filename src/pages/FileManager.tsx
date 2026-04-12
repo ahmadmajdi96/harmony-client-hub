@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { triggerBrowserDownload } from "@/lib/download";
 import { Upload, Download, Trash2, FileText, HardDrive, Image, FileArchive, Search } from "lucide-react";
 
 export default function FileManager() {
@@ -105,11 +106,7 @@ export default function FileManager() {
 
   const downloadFile = (filePath: string, fileName: string) => {
     const { data } = supabase.storage.from("project-files").getPublicUrl(filePath);
-    const a = document.createElement("a");
-    a.href = data.publicUrl;
-    a.download = fileName;
-    a.target = "_blank";
-    a.click();
+    triggerBrowserDownload(data.publicUrl, fileName);
   };
 
   const formatSize = (bytes: number | null) => {
