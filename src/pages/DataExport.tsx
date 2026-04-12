@@ -21,8 +21,8 @@ import {
   ListChecks, Filter, FileSpreadsheet, X, BarChart3, Columns3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { downloadBlob } from "@/lib/download";
 import { motion, AnimatePresence } from "framer-motion";
-import { saveAs } from "file-saver";
 import { toast } from "sonner";
 import { utils, write } from "xlsx";
 
@@ -263,7 +263,7 @@ export default function DataExport() {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
 
-      saveAs(blob, filename);
+      downloadBlob(blob, filename);
       toast.success("Excel file generated", {
         description: `${filteredData.length} ${ENTITY_CONFIG[entity].label.toLowerCase()} exported.`,
       });
