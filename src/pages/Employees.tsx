@@ -92,6 +92,9 @@ export default function Employees() {
   const [dateTo, setDateTo] = useState<Date | undefined>();
   const [taskStatusFilter, setTaskStatusFilter] = useState("all");
 
+  // Analytics ref
+  const analyticsRef = useRef<HTMLDivElement>(null);
+
   // Project assignment
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [assignEmployee, setAssignEmployee] = useState<Employee | null>(null);
