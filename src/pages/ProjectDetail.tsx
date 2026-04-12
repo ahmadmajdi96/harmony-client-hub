@@ -54,6 +54,15 @@ export default function ProjectDetail() {
     enabled: !!id,
   });
 
+  const { data: projectRefs, refetch: refetchRefs } = useQuery({
+    queryKey: ["project-references", id],
+    queryFn: async () => {
+      const { data } = await supabase.from("references" as any).select("*").eq("project_id", id!).order("created_at", { ascending: false });
+      return (data as any[]) || [];
+    },
+    enabled: !!id,
+  });
+
   const { data: tasks } = useQuery({
     queryKey: ["project-tasks", id],
     queryFn: async () => {
@@ -359,6 +368,7 @@ export default function ProjectDetail() {
             <TabsTrigger value="suppliers"><Truck className="h-4 w-4 mr-1" /> Suppliers ({projectSuppliers?.length || 0})</TabsTrigger>
             <TabsTrigger value="employees"><Users2 className="h-4 w-4 mr-1" /> Employees ({projectEmployees?.length || 0})</TabsTrigger>
             <TabsTrigger value="files"><FileText className="h-4 w-4 mr-1" /> Files ({files?.length || 0})</TabsTrigger>
+            <TabsTrigger value="references"><Hash className="h-4 w-4 mr-1" /> References ({projectRefs?.length || 0})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="tasks">
