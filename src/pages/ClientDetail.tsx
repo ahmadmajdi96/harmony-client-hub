@@ -57,7 +57,35 @@ export default function ClientDetail() {
     enabled: !!id,
   });
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const { data: activities } = useQuery({
+    queryKey: ["client-activities", id],
+    queryFn: async () => {
+      const { data } = await supabase.from("activity_log").select("*").eq("entity_type", "client").eq("entity_id", id!).order("created_at", { ascending: false }).limit(50);
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
+  const { data: projectActivities } = useQuery({
+    queryKey: ["client-project-activities", id, projects],
+    queryFn: async () => {
+      if (!projects?.length) return [];
+      const projectIds = projects.map((p: any) => p.id);
+      const { data } = await supabase.from("activity_log").select("*").in("entity_id", projectIds).order("created_at", { ascending: false }).limit(50);
+      return data || [];
+    },
+    enabled: !!id && !!projects?.length,
+  });
+
+  const allActivities = [...(activities || []), ...(projectActivities || [])].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  const actionColor = (action: string) => {
+    if (action === "created") return "text-emerald-500";
+    if (action === "updated") return "text-blue-500";
+    if (action === "deleted") return "text-red-500";
+    return "text-muted-foreground";
+  };
+
     const uploadFiles = e.target.files;
     if (!uploadFiles?.length) return;
     setUploading(true);
