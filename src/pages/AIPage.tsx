@@ -185,6 +185,10 @@ export default function AIPage() {
               <Bot className="h-4 w-4" />
               Chat Assistant
             </TabsTrigger>
+            <TabsTrigger value="reports" className="rounded-lg gap-2 data-[state=active]:shadow-sm">
+              <FileText className="h-4 w-4" />
+              Weekly Reports
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="analysis">
@@ -216,6 +220,10 @@ export default function AIPage() {
             >
               <EmbeddedChat className="h-[calc(100vh-220px)]" />
             </motion.div>
+          </TabsContent>
+
+          <TabsContent value="reports">
+            <WeeklyReportsTab />
           </TabsContent>
         </Tabs>
       </div>
