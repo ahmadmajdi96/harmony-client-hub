@@ -248,6 +248,42 @@ export default function ClientDetail() {
               </Table>
             </CardContent></Card>
           </TabsContent>
+
+          <TabsContent value="activity">
+            <Card>
+              <CardContent className="p-4">
+                {allActivities.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-6">No activity recorded yet.</p>
+                ) : (
+                  <div className="relative">
+                    <div className="absolute left-4 top-0 bottom-0 w-px bg-border" />
+                    <div className="space-y-4">
+                      {allActivities.map((activity) => (
+                        <div key={activity.id} className="relative pl-10">
+                          <div className={`absolute left-2.5 top-1.5 w-3 h-3 rounded-full border-2 border-background ${
+                            activity.action === "created" ? "bg-emerald-500" :
+                            activity.action === "updated" ? "bg-blue-500" :
+                            activity.action === "deleted" ? "bg-red-500" : "bg-muted-foreground"
+                          }`} />
+                          <div className="p-3 rounded-lg border bg-card hover:shadow-sm transition-shadow">
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-2">
+                                <span className={`text-xs font-semibold uppercase ${actionColor(activity.action)}`}>{activity.action}</span>
+                                <span className="text-xs text-muted-foreground">·</span>
+                                <span className="text-xs font-medium text-muted-foreground capitalize">{activity.entity_type}</span>
+                              </div>
+                              <span className="text-xs text-muted-foreground">{format(new Date(activity.created_at), "MMM d, yyyy · h:mm a")}</span>
+                            </div>
+                            <p className="text-sm">{activity.description || `${activity.entity_name || "Item"} was ${activity.action}`}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </div>
     </div>
