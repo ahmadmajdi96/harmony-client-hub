@@ -151,7 +151,7 @@ export default function Reports() {
           <KPICard title="Task Completion" value={`${taskCompletion}%`} icon={ListChecks} status="warning" />
           <KPICard title="Projects" value={String(projects?.length || 0)} icon={FolderKanban} status="info" />
           <KPICard title="Clients" value={String(clients?.length || 0)} icon={Users} status="success" />
-          <KPICard title="Suppliers" value={String(suppliers?.length || 0)} icon={BarChart3} status="default" />
+          <KPICard title="Suppliers" value={String(suppliers?.length || 0)} icon={BarChart3} status="info" />
         </div>
 
         {/* Charts Row 1 */}
