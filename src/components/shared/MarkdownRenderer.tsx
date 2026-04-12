@@ -87,7 +87,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
             </th>
           ),
           td: ({ children }) => (
-            <td className="px-3 py-2 text-foreground/80 text-xs whitespace-nowrap">
+            <td className="px-3 py-2 text-foreground/80 text-xs">
               {children}
             </td>
           ),
