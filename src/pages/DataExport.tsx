@@ -237,7 +237,18 @@ export default function DataExport() {
       metaWs["!cols"] = [{ wch: 18 }, { wch: 60 }];
       utils.book_append_sheet(wb, metaWs, "Export Info");
 
-      writeFileXLSX(wb, `${entity}_export_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
+      const wbout = write(wb, { bookType: "xlsx", type: "array" }) as ArrayBuffer;
+      const blob = new Blob([wbout], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${entity}_export_${format(new Date(), "yyyy-MM-dd")}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
     } catch (e) {
       console.error("Export failed:", e);
     }
