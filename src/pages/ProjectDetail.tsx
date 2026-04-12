@@ -508,6 +508,33 @@ export default function ProjectDetail() {
               </Table>
             </CardContent></Card>
           </TabsContent>
+
+          <TabsContent value="references">
+            <div className="flex justify-end mb-4">
+              <Link to={`/references?project=${id}`}>
+                <Button size="sm"><Plus className="h-4 w-4 mr-1" /> Generate Reference</Button>
+              </Link>
+            </div>
+            <Card><CardContent className="p-0">
+              <Table>
+                <TableHeader><TableRow><TableHead>Reference</TableHead><TableHead>Type</TableHead><TableHead>Company</TableHead><TableHead>Activity</TableHead><TableHead>Client</TableHead><TableHead>Rev</TableHead><TableHead>Date</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {projectRefs?.map((r: any) => (
+                    <TableRow key={r.id}>
+                      <TableCell className="font-mono font-medium text-sm">{r.reference}</TableCell>
+                      <TableCell className="text-sm">{r.doc_type === "Q" ? "Quotation" : r.doc_type === "L" ? "Letter" : r.doc_type}</TableCell>
+                      <TableCell className="text-sm">{r.company}</TableCell>
+                      <TableCell className="text-sm">{r.activity}</TableCell>
+                      <TableCell className="text-sm">{r.client}</TableCell>
+                      <TableCell className="text-sm">{r.revision}</TableCell>
+                      <TableCell className="text-sm">{new Date(r.created_at).toLocaleDateString()}</TableCell>
+                    </TableRow>
+                  ))}
+                  {(!projectRefs || projectRefs.length === 0) && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">No document references yet.</TableCell></TableRow>}
+                </TableBody>
+              </Table>
+            </CardContent></Card>
+          </TabsContent>
         </Tabs>
       </div>
 
