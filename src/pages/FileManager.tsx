@@ -130,7 +130,7 @@ export default function FileManager() {
     <div>
       <PageHeader title="File Manager" subtitle="All uploaded files across projects and clients" />
       <div className="p-6 space-y-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in">
           <KPICard title="Total Files" value={String(files?.length || 0)} icon={FileText} status="info" />
           <KPICard title="Total Size" value={formatSize(totalSize)} icon={HardDrive} status="warning" />
           <KPICard title="Images" value={String(imageFiles)} icon={Image} status="success" />

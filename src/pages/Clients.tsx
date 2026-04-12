@@ -70,7 +70,7 @@ export default function Clients() {
     <div>
       <PageHeader title="Clients" subtitle="Manage client information and relationships" actionLabel="Add Client" actionIcon={Plus} onAction={openAdd} />
       <div className="p-6 space-y-6">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 animate-fade-in">
           <KPICard title="Total Clients" value={String(clients?.length || 0)} icon={Users} status="info" />
           <KPICard title="Active" value={String(clients?.filter(c => c.status === "active").length || 0)} status="success" />
           <KPICard title="Inactive" value={String(clients?.filter(c => c.status === "inactive").length || 0)} status="warning" />
