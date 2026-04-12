@@ -59,7 +59,7 @@ export default function Tasks() {
   const { data: projects } = useQuery({
     queryKey: ["projects-list"],
     queryFn: async () => {
-      const { data } = await supabase.from("projects").select("id, name");
+      const { data } = await supabase.from("projects").select("id, name, client_id");
       return data || [];
     },
   });
