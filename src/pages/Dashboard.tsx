@@ -124,12 +124,11 @@ export default function Dashboard() {
         >
           {[
             { title: "Projects", value: String(projects?.length || 0), icon: FolderKanban, status: "info" as const },
-            
             { title: "Clients", value: String(clients?.filter(c => c.status === "active").length || 0), icon: Users, status: "success" as const },
             { title: "Suppliers", value: String(suppliers?.length || 0), icon: Truck, status: "warning" as const },
             { title: "Tasks", value: `${completedTasks}/${totalTasks}`, icon: ListChecks, status: "info" as const },
+            { title: "Employees", value: String(employees?.length || 0), icon: Users2, status: "info" as const },
             { title: "Budget", value: `$${totalBudget.toLocaleString()}`, icon: DollarSign, status: "warning" as const },
-            { title: "Employees", value: String(employees?.length || 0), icon: Users2, status: "info" as const, change: `${activeEmployees} active`, changeType: "positive" as const },
           ].map((kpi) => (
             <motion.div key={kpi.title} variants={itemVariants}>
               <KPICard {...kpi} />
