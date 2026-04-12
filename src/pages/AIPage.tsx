@@ -308,7 +308,7 @@ function WeeklyReportsTab() {
   );
 }
 
-
+export default function AIPage() {
   return (
     <div>
       <PageHeader
