@@ -86,6 +86,7 @@ export default function ClientDetail() {
     return "text-muted-foreground";
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadFiles = e.target.files;
     if (!uploadFiles?.length) return;
     setUploading(true);
