@@ -17,17 +17,22 @@ import { Calendar } from "@/components/ui/calendar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { format, startOfDay, endOfDay } from "date-fns";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { format, startOfDay, endOfDay, differenceInDays, parseISO, addDays, min as minDate, max as maxDate } from "date-fns";
 import {
   Search, Plus, Pencil, Trash2, Users2, FolderKanban, ListChecks,
   CalendarIcon, Download, X, Filter, UserPlus, Link2, Unlink,
-  Clock, BarChart3,
+  Clock, BarChart3, TrendingUp, PieChart, CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { saveAs } from "file-saver";
 import { utils, write } from "xlsx";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart as RPieChart, Pie, Cell, Legend,
+} from "recharts";
 
 type Employee = {
   id: string;
@@ -45,6 +50,29 @@ type Employee = {
 };
 
 const emptyForm = { name: "", email: "", phone: "", role: "", department: "", status: "active", notes: "" };
+
+const STATUS_COLORS: Record<string, string> = {
+  todo: "hsl(var(--muted-foreground))",
+  in_progress: "hsl(var(--info))",
+  done: "hsl(var(--success))",
+};
+
+const PRIORITY_COLORS: Record<string, string> = {
+  high: "hsl(var(--destructive))",
+  medium: "hsl(var(--warning))",
+  low: "hsl(var(--muted-foreground))",
+};
+
+const CHART_COLORS = [
+  "hsl(var(--primary))",
+  "hsl(var(--success))",
+  "hsl(var(--warning))",
+  "hsl(var(--destructive))",
+  "hsl(var(--info))",
+  "hsl(252 56% 70%)",
+  "hsl(36 90% 65%)",
+  "hsl(152 60% 55%)",
+];
 
 export default function Employees() {
   const qc = useQueryClient();
@@ -68,6 +96,14 @@ export default function Employees() {
   const [assignEmployee, setAssignEmployee] = useState<Employee | null>(null);
   const [assignProjectId, setAssignProjectId] = useState("");
   const [assignRole, setAssignRole] = useState("");
+
+  // Bulk assignment
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
+  const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
+  const [bulkAssignType, setBulkAssignType] = useState<"project" | "task">("project");
+  const [bulkProjectId, setBulkProjectId] = useState("");
+  const [bulkTaskId, setBulkTaskId] = useState("");
+  const [bulkRole, setBulkRole] = useState("");
 
   // ── Queries ──
   const { data: employees = [] } = useQuery({
@@ -179,6 +215,48 @@ export default function Employees() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // Bulk assign mutation
+  const bulkAssignProjectMutation = useMutation({
+    mutationFn: async ({ employee_ids, project_id, role }: { employee_ids: string[]; project_id: string; role: string }) => {
+      const existing = employeeProjects.filter(ep => ep.project_id === project_id).map(ep => ep.employee_id);
+      const toInsert = employee_ids.filter(id => !existing.includes(id));
+      if (!toInsert.length) throw new Error("All selected employees are already assigned to this project");
+      const rows = toInsert.map(employee_id => ({ employee_id, project_id, role: role || null }));
+      const { error } = await supabase.from("employee_projects").insert(rows);
+      if (error) throw error;
+      return toInsert.length;
+    },
+    onSuccess: (count) => {
+      invalidateAll();
+      setBulkAssignOpen(false);
+      setSelectedEmployeeIds([]);
+      setBulkProjectId("");
+      setBulkRole("");
+      toast.success(`${count} employee(s) assigned to project`);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const bulkAssignTaskMutation = useMutation({
+    mutationFn: async ({ employee_ids, task_id }: { employee_ids: string[]; task_id: string }) => {
+      const existing = taskEmployees.filter(te => te.task_id === task_id).map(te => te.employee_id);
+      const toInsert = employee_ids.filter(id => !existing.includes(id));
+      if (!toInsert.length) throw new Error("All selected employees are already assigned to this task");
+      const rows = toInsert.map(employee_id => ({ employee_id, task_id }));
+      const { error } = await supabase.from("task_employees").insert(rows);
+      if (error) throw error;
+      return toInsert.length;
+    },
+    onSuccess: (count) => {
+      invalidateAll();
+      setBulkAssignOpen(false);
+      setSelectedEmployeeIds([]);
+      setBulkTaskId("");
+      toast.success(`${count} employee(s) assigned to task`);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   // ── Derived data ──
   const departments = useMemo(() => Array.from(new Set(employees.map(e => e.department).filter(Boolean))).sort() as string[], [employees]);
 
@@ -223,6 +301,89 @@ export default function Employees() {
 
   const allTaskStatuses = useMemo(() => Array.from(new Set(allTasks.map(t => t.status))).sort(), [allTasks]);
 
+  // ── Analytics data ──
+  const analyticsData = useMemo(() => {
+    const activeEmps = employees.filter(e => e.status === "active");
+
+    // Workload per employee
+    const workload = activeEmps.map(emp => {
+      const tasks = getEmployeeTasks(emp.id);
+      const done = tasks.filter(t => t.status === "done").length;
+      const inProgress = tasks.filter(t => t.status === "in_progress").length;
+      const todo = tasks.filter(t => t.status === "todo").length;
+      return {
+        name: emp.name.split(" ")[0],
+        fullName: emp.name,
+        done,
+        in_progress: inProgress,
+        todo,
+        total: tasks.length,
+        completionRate: tasks.length > 0 ? Math.round((done / tasks.length) * 100) : 0,
+      };
+    }).filter(w => w.total > 0).sort((a, b) => b.total - a.total).slice(0, 10);
+
+    // Task status distribution
+    const statusDist = [
+      { name: "To Do", value: allTasks.filter(t => t.status === "todo").length, color: STATUS_COLORS.todo },
+      { name: "In Progress", value: allTasks.filter(t => t.status === "in_progress").length, color: STATUS_COLORS.in_progress },
+      { name: "Done", value: allTasks.filter(t => t.status === "done").length, color: STATUS_COLORS.done },
+    ].filter(s => s.value > 0);
+
+    // Priority distribution
+    const priorityDist = [
+      { name: "High", value: allTasks.filter(t => t.priority === "high").length, color: PRIORITY_COLORS.high },
+      { name: "Medium", value: allTasks.filter(t => t.priority === "medium").length, color: PRIORITY_COLORS.medium },
+      { name: "Low", value: allTasks.filter(t => t.priority === "low").length, color: PRIORITY_COLORS.low },
+    ].filter(p => p.value > 0);
+
+    // Department workload
+    const deptMap = new Map<string, { total: number; done: number }>();
+    activeEmps.forEach(emp => {
+      const dept = emp.department || "Unassigned";
+      const tasks = getEmployeeTasks(emp.id);
+      const existing = deptMap.get(dept) || { total: 0, done: 0 };
+      deptMap.set(dept, {
+        total: existing.total + tasks.length,
+        done: existing.done + tasks.filter(t => t.status === "done").length,
+      });
+    });
+    const deptWorkload = Array.from(deptMap.entries()).map(([name, v]) => ({
+      name,
+      total: v.total,
+      done: v.done,
+      completionRate: v.total > 0 ? Math.round((v.done / v.total) * 100) : 0,
+    })).sort((a, b) => b.total - a.total);
+
+    // Overall metrics
+    const totalAssignedTasks = taskEmployees.length;
+    const totalDone = allTasks.filter(t => t.status === "done").length;
+    const overallRate = allTasks.length > 0 ? Math.round((totalDone / allTasks.length) * 100) : 0;
+
+    return { workload, statusDist, priorityDist, deptWorkload, totalAssignedTasks, overallRate };
+  }, [employees, allTasks, taskEmployees]);
+
+  // ── Gantt timeline data ──
+  const ganttData = useMemo(() => {
+    if (timelineData.length === 0) return null;
+
+    // Collect all tasks with dates
+    const allTimelineTasks = timelineData.flatMap(({ employee, tasks }) =>
+      tasks.map(task => {
+        const created = parseISO(task.created_at);
+        const due = task.due_date ? parseISO(task.due_date) : addDays(created, 7);
+        return { employee, task, start: created, end: due };
+      })
+    );
+
+    if (allTimelineTasks.length === 0) return null;
+
+    const globalStart = allTimelineTasks.reduce((min, t) => t.start < min ? t.start : min, allTimelineTasks[0].start);
+    const globalEnd = allTimelineTasks.reduce((max, t) => t.end > max ? t.end : max, allTimelineTasks[0].end);
+    const totalDays = Math.max(differenceInDays(globalEnd, globalStart), 1);
+
+    return { allTimelineTasks, globalStart, globalEnd, totalDays };
+  }, [timelineData]);
+
   // ── Actions ──
   const openEdit = (emp: Employee) => {
     setEditingEmployee(emp);
@@ -234,6 +395,20 @@ export default function Employees() {
     setEditingEmployee(null);
     setForm(emptyForm);
     setFormOpen(true);
+  };
+
+  const toggleEmployeeSelection = (empId: string) => {
+    setSelectedEmployeeIds(prev =>
+      prev.includes(empId) ? prev.filter(id => id !== empId) : [...prev, empId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedEmployeeIds.length === filtered.length) {
+      setSelectedEmployeeIds([]);
+    } else {
+      setSelectedEmployeeIds(filtered.map(e => e.id));
+    }
   };
 
   const handleExportTimeline = () => {
@@ -273,6 +448,12 @@ export default function Employees() {
   const totalAssignments = employeeProjects.length;
   const totalTaskAssignments = taskEmployees.length;
 
+  const workloadChartConfig = {
+    done: { label: "Done", color: "hsl(var(--success))" },
+    in_progress: { label: "In Progress", color: "hsl(var(--info))" },
+    todo: { label: "To Do", color: "hsl(var(--muted-foreground))" },
+  };
+
   return (
     <div>
       <PageHeader title="Employees" subtitle="Manage your workforce, project assignments and task timelines" />
@@ -288,20 +469,20 @@ export default function Employees() {
           </Card>
           <Card className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center"><Users2 className="w-5 h-5 text-emerald-500" /></div>
-              <div><div className="text-xs text-muted-foreground">Active</div><div className="text-2xl font-bold text-emerald-600">{activeCount}</div></div>
+              <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center"><Users2 className="w-5 h-5 text-success" /></div>
+              <div><div className="text-xs text-muted-foreground">Active</div><div className="text-2xl font-bold">{activeCount}</div></div>
             </div>
           </Card>
           <Card className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center"><FolderKanban className="w-5 h-5 text-blue-500" /></div>
-              <div><div className="text-xs text-muted-foreground">Project Assignments</div><div className="text-2xl font-bold text-blue-600">{totalAssignments}</div></div>
+              <div className="w-10 h-10 rounded-lg bg-info/10 flex items-center justify-center"><FolderKanban className="w-5 h-5 text-info" /></div>
+              <div><div className="text-xs text-muted-foreground">Project Assignments</div><div className="text-2xl font-bold">{totalAssignments}</div></div>
             </div>
           </Card>
           <Card className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center"><ListChecks className="w-5 h-5 text-violet-500" /></div>
-              <div><div className="text-xs text-muted-foreground">Task Assignments</div><div className="text-2xl font-bold text-violet-600">{totalTaskAssignments}</div></div>
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"><ListChecks className="w-5 h-5 text-primary" /></div>
+              <div><div className="text-xs text-muted-foreground">Task Assignments</div><div className="text-2xl font-bold">{totalTaskAssignments}</div></div>
             </div>
           </Card>
         </div>
@@ -312,6 +493,7 @@ export default function Employees() {
             <TabsTrigger value="roster" className="gap-2"><Users2 className="w-4 h-4" /> Roster</TabsTrigger>
             <TabsTrigger value="assignments" className="gap-2"><FolderKanban className="w-4 h-4" /> Assignments</TabsTrigger>
             <TabsTrigger value="timeline" className="gap-2"><Clock className="w-4 h-4" /> Task Timeline</TabsTrigger>
+            <TabsTrigger value="analytics" className="gap-2"><BarChart3 className="w-4 h-4" /> Analytics</TabsTrigger>
           </TabsList>
 
           {/* ═══════ ROSTER TAB ═══════ */}
@@ -338,6 +520,11 @@ export default function Employees() {
                   </SelectContent>
                 </Select>
               )}
+              {selectedEmployeeIds.length > 0 && (
+                <Button variant="secondary" className="gap-2" onClick={() => { setBulkAssignType("project"); setBulkAssignOpen(true); }}>
+                  <UserPlus className="w-4 h-4" /> Bulk Assign ({selectedEmployeeIds.length})
+                </Button>
+              )}
               <Button onClick={openAdd} className="gap-2 w-full md:w-auto"><Plus className="w-4 h-4" /> Add Employee</Button>
             </div>
 
@@ -347,6 +534,12 @@ export default function Employees() {
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/30">
+                        <TableHead className="w-10">
+                          <Checkbox
+                            checked={selectedEmployeeIds.length === filtered.length && filtered.length > 0}
+                            onCheckedChange={toggleSelectAll}
+                          />
+                        </TableHead>
                         <TableHead className="text-xs font-semibold">Ref</TableHead>
                         <TableHead className="text-xs font-semibold">Name</TableHead>
                         <TableHead className="text-xs font-semibold hidden md:table-cell">Role</TableHead>
@@ -360,9 +553,15 @@ export default function Employees() {
                     </TableHeader>
                     <TableBody>
                       {filtered.length === 0 ? (
-                        <TableRow><TableCell colSpan={9} className="text-center py-12 text-muted-foreground">No employees found</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={10} className="text-center py-12 text-muted-foreground">No employees found</TableCell></TableRow>
                       ) : filtered.map(emp => (
-                        <TableRow key={emp.id}>
+                        <TableRow key={emp.id} className={cn(selectedEmployeeIds.includes(emp.id) && "bg-accent/30")}>
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedEmployeeIds.includes(emp.id)}
+                              onCheckedChange={() => toggleEmployeeSelection(emp.id)}
+                            />
+                          </TableCell>
                           <TableCell className="text-xs font-mono text-muted-foreground">{emp.reference_number}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2.5">
@@ -523,7 +722,96 @@ export default function Employees() {
               </CardContent>
             </Card>
 
-            {/* Timeline View */}
+            {/* Graphical Gantt Timeline */}
+            {ganttData && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4 text-primary" /> Visual Timeline
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    {/* Header date range */}
+                    <div className="flex items-center justify-between text-xs text-muted-foreground mb-3 px-1">
+                      <span>{format(ganttData.globalStart, "MMM d, yyyy")}</span>
+                      <span>{format(ganttData.globalEnd, "MMM d, yyyy")}</span>
+                    </div>
+
+                    <div className="space-y-2 min-w-[600px]">
+                      {timelineData.map(({ employee, tasks }, empIdx) => (
+                        <div key={employee.id} className="flex items-start gap-3">
+                          {/* Employee label */}
+                          <div className="w-32 shrink-0 flex items-center gap-2 pt-1">
+                            <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
+                              <span className="text-[10px] font-bold text-primary">
+                                {employee.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()}
+                              </span>
+                            </div>
+                            <span className="text-xs font-medium truncate">{employee.name}</span>
+                          </div>
+
+                          {/* Gantt bars */}
+                          <div className="flex-1 relative" style={{ minHeight: `${Math.max(tasks.length * 28, 28)}px` }}>
+                            {/* Background grid */}
+                            <div className="absolute inset-0 bg-muted/20 rounded-md border border-border/30" />
+
+                            {tasks.map((task, taskIdx) => {
+                              const start = parseISO(task.created_at);
+                              const end = task.due_date ? parseISO(task.due_date) : addDays(start, 7);
+                              const leftPct = (differenceInDays(start, ganttData.globalStart) / ganttData.totalDays) * 100;
+                              const widthPct = Math.max((differenceInDays(end, start) / ganttData.totalDays) * 100, 2);
+
+                              const statusColor = task.status === "done"
+                                ? "bg-success/80"
+                                : task.status === "in_progress"
+                                ? "bg-info/80"
+                                : "bg-muted-foreground/40";
+
+                              return (
+                                <div
+                                  key={task.id}
+                                  className={cn(
+                                    "absolute h-5 rounded-sm flex items-center px-1.5 text-[10px] font-medium text-primary-foreground truncate cursor-default transition-opacity hover:opacity-90",
+                                    statusColor
+                                  )}
+                                  style={{
+                                    left: `${Math.max(leftPct, 0)}%`,
+                                    width: `${Math.min(widthPct, 100 - Math.max(leftPct, 0))}%`,
+                                    top: `${taskIdx * 28 + 4}px`,
+                                  }}
+                                  title={`${task.title} (${task.status}) — ${format(start, "MMM d")} → ${format(end, "MMM d")}`}
+                                >
+                                  {task.title}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Legend */}
+                    <div className="flex items-center gap-4 mt-4 pt-3 border-t">
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <div className="w-3 h-3 rounded-sm bg-muted-foreground/40" />
+                        <span className="text-muted-foreground">To Do</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <div className="w-3 h-3 rounded-sm bg-info/80" />
+                        <span className="text-muted-foreground">In Progress</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <div className="w-3 h-3 rounded-sm bg-success/80" />
+                        <span className="text-muted-foreground">Done</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Timeline Table */}
             {timelineData.length === 0 ? (
               <Card className="p-12 text-center text-muted-foreground">
                 <BarChart3 className="w-8 h-8 mx-auto mb-2 opacity-40" />
@@ -571,7 +859,7 @@ export default function Employees() {
                                     <span className={cn(
                                       "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold capitalize",
                                       task.priority === "high" && "border-destructive/40 text-destructive",
-                                      task.priority === "medium" && "border-yellow-500/40 text-yellow-600",
+                                      task.priority === "medium" && "border-warning/40 text-warning",
                                       task.priority === "low" && "border-muted text-muted-foreground"
                                     )}>{task.priority}</span>
                                   </TableCell>
@@ -587,6 +875,164 @@ export default function Employees() {
                   </Card>
                 ))}
               </div>
+            )}
+          </TabsContent>
+
+          {/* ═══════ ANALYTICS TAB ═══════ */}
+          <TabsContent value="analytics" className="space-y-4 mt-4">
+            {/* Summary KPIs */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <Card className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center"><CheckCircle2 className="w-5 h-5 text-success" /></div>
+                  <div><div className="text-xs text-muted-foreground">Completion Rate</div><div className="text-2xl font-bold">{analyticsData.overallRate}%</div></div>
+                </div>
+              </Card>
+              <Card className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"><ListChecks className="w-5 h-5 text-primary" /></div>
+                  <div><div className="text-xs text-muted-foreground">Total Tasks</div><div className="text-2xl font-bold">{allTasks.length}</div></div>
+                </div>
+              </Card>
+              <Card className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-info/10 flex items-center justify-center"><TrendingUp className="w-5 h-5 text-info" /></div>
+                  <div><div className="text-xs text-muted-foreground">Avg Tasks/Employee</div><div className="text-2xl font-bold">{activeCount > 0 ? (totalTaskAssignments / activeCount).toFixed(1) : "0"}</div></div>
+                </div>
+              </Card>
+              <Card className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-warning/10 flex items-center justify-center"><PieChart className="w-5 h-5 text-warning" /></div>
+                  <div><div className="text-xs text-muted-foreground">Departments</div><div className="text-2xl font-bold">{departments.length || 1}</div></div>
+                </div>
+              </Card>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Workload Distribution */}
+              {analyticsData.workload.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Employee Workload Distribution</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ChartContainer config={workloadChartConfig} className="h-[300px] w-full">
+                      <BarChart data={analyticsData.workload} layout="vertical" margin={{ left: 10, right: 10 }}>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                        <XAxis type="number" />
+                        <YAxis dataKey="name" type="category" width={70} tick={{ fontSize: 11 }} />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Bar dataKey="done" stackId="a" fill="var(--color-done)" radius={[0, 0, 0, 0]} />
+                        <Bar dataKey="in_progress" stackId="a" fill="var(--color-in_progress)" />
+                        <Bar dataKey="todo" stackId="a" fill="var(--color-todo)" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ChartContainer>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Task Status Pie */}
+              {analyticsData.statusDist.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Task Status Distribution</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[300px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <RPieChart>
+                          <Pie
+                            data={analyticsData.statusDist}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={100}
+                            dataKey="value"
+                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          >
+                            {analyticsData.statusDist.map((entry, i) => (
+                              <Cell key={i} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                          <Legend />
+                        </RPieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Completion Rate per Employee */}
+              {analyticsData.workload.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Completion Rate by Employee</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {analyticsData.workload.map((emp, i) => (
+                        <div key={i} className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-medium">{emp.fullName}</span>
+                            <span className="text-muted-foreground">{emp.completionRate}% ({emp.done}/{emp.total})</span>
+                          </div>
+                          <div className="h-2 rounded-full bg-muted overflow-hidden">
+                            <motion.div
+                              className="h-full rounded-full bg-success"
+                              initial={{ width: 0 }}
+                              animate={{ width: `${emp.completionRate}%` }}
+                              transition={{ duration: 0.8, delay: i * 0.1 }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Department Workload */}
+              {analyticsData.deptWorkload.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Department Workload</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[300px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={analyticsData.deptWorkload} margin={{ left: 10, right: 10 }}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                          <YAxis />
+                          <Tooltip
+                            content={({ active, payload, label }) => {
+                              if (!active || !payload?.length) return null;
+                              return (
+                                <div className="rounded-lg border bg-background p-2 shadow-lg">
+                                  <p className="text-xs font-medium mb-1">{label}</p>
+                                  {payload.map((p: any) => (
+                                    <p key={p.name} className="text-xs text-muted-foreground">{p.name}: {p.value}</p>
+                                  ))}
+                                </div>
+                              );
+                            }}
+                          />
+                          <Bar dataKey="total" name="Total Tasks" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="done" name="Completed" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            {analyticsData.workload.length === 0 && (
+              <Card className="p-12 text-center text-muted-foreground">
+                <BarChart3 className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                Assign tasks to employees to see performance analytics
+              </Card>
             )}
           </TabsContent>
         </Tabs>
@@ -653,6 +1099,77 @@ export default function Employees() {
             <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>Cancel</Button>
             <Button disabled={!assignProjectId || assignMutation.isPending} onClick={() => assignEmployee && assignMutation.mutate({ employee_id: assignEmployee.id, project_id: assignProjectId, role: assignRole })}>
               {assignMutation.isPending ? "Assigning..." : "Assign"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Bulk Assign Dialog ── */}
+      <Dialog open={bulkAssignOpen} onOpenChange={setBulkAssignOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Bulk Assign {selectedEmployeeIds.length} Employee(s)</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Assign to</Label>
+              <Select value={bulkAssignType} onValueChange={(v: "project" | "task") => setBulkAssignType(v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="project">Project</SelectItem>
+                  <SelectItem value="task">Task</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {bulkAssignType === "project" ? (
+              <>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Project</Label>
+                  <Select value={bulkProjectId} onValueChange={setBulkProjectId}>
+                    <SelectTrigger><SelectValue placeholder="Select project" /></SelectTrigger>
+                    <SelectContent>
+                      {projects.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Role (optional)</Label>
+                  <Input value={bulkRole} onChange={e => setBulkRole(e.target.value)} placeholder="e.g. Developer" />
+                </div>
+              </>
+            ) : (
+              <div className="space-y-1.5">
+                <Label className="text-xs">Task</Label>
+                <Select value={bulkTaskId} onValueChange={setBulkTaskId}>
+                  <SelectTrigger><SelectValue placeholder="Select task" /></SelectTrigger>
+                  <SelectContent>
+                    {allTasks.map(t => <SelectItem key={t.id} value={t.id}>{t.title}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="text-xs text-muted-foreground">
+              Selected: {selectedEmployeeIds.map(id => employees.find(e => e.id === id)?.name).filter(Boolean).join(", ")}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkAssignOpen(false)}>Cancel</Button>
+            <Button
+              disabled={
+                (bulkAssignType === "project" ? !bulkProjectId : !bulkTaskId) ||
+                bulkAssignProjectMutation.isPending || bulkAssignTaskMutation.isPending
+              }
+              onClick={() => {
+                if (bulkAssignType === "project") {
+                  bulkAssignProjectMutation.mutate({ employee_ids: selectedEmployeeIds, project_id: bulkProjectId, role: bulkRole });
+                } else {
+                  bulkAssignTaskMutation.mutate({ employee_ids: selectedEmployeeIds, task_id: bulkTaskId });
+                }
+              }}
+            >
+              {(bulkAssignProjectMutation.isPending || bulkAssignTaskMutation.isPending) ? "Assigning..." : "Assign All"}
             </Button>
           </DialogFooter>
         </DialogContent>
