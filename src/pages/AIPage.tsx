@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Bot, BarChart3, Loader2, RefreshCw, TrendingUp, Users2, ListChecks, FolderKanban, AlertTriangle, CheckCircle2 } from "lucide-react";
-import ReactMarkdown from "react-markdown";
+import { MarkdownRenderer } from "@/components/shared/MarkdownRenderer";
 import { motion } from "framer-motion";
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/system-chat`;
@@ -157,9 +157,7 @@ function AnalysisCardComponent({ card }: { card: AnalysisCard }) {
             </div>
           )}
           {content && (
-            <div className="prose prose-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_p]:my-1.5 [&_ul]:my-1.5 [&_ol]:my-1.5 [&_li]:my-0.5 [&_table]:text-xs [&_table]:my-2 [&_table]:w-full [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left [&_th]:border-b [&_th]:border-border [&_th]:bg-muted/50 [&_td]:px-2 [&_td]:py-1.5 [&_td]:border-b [&_td]:border-border/40 [&_code]:text-xs [&_code]:bg-muted/60 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_pre]:bg-muted/60 [&_pre]:p-3 [&_pre]:rounded-lg [&_h1]:text-base [&_h1]:font-bold [&_h2]:text-sm [&_h2]:font-semibold [&_h3]:text-sm [&_h3]:font-medium [&_blockquote]:border-primary/30 [&_blockquote]:bg-primary/5 [&_blockquote]:px-3 [&_blockquote]:py-1 [&_blockquote]:rounded-r-lg [&_hr]:my-3 [&_strong]:text-foreground">
-              <ReactMarkdown>{content}</ReactMarkdown>
-            </div>
+            <MarkdownRenderer content={content} />
           )}
         </CardContent>
       )}
