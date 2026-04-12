@@ -409,21 +409,21 @@ export default function ProjectDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Supplier Dialog */}
-      <Dialog open={supplierDialog} onOpenChange={setSupplierDialog}>
+      {/* Client Dialog */}
+      <Dialog open={clientDialog} onOpenChange={setClientDialog}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Add Supplier to Project</DialogTitle><DialogDescription>Select a supplier to assign.</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>Add Client to Project</DialogTitle><DialogDescription>Select a client to assign.</DialogDescription></DialogHeader>
           <div className="space-y-4">
-            <div><Label>Supplier</Label>
-              <Select value={supplierForm.supplier_id} onValueChange={v => setSupplierForm(f => ({ ...f, supplier_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Select supplier" /></SelectTrigger>
-                <SelectContent>{allSuppliers?.filter(s => !projectSuppliers?.some(ps => ps.supplier_id === s.id)).map(s => <SelectItem key={s.id} value={s.id}>{s.name} ({s.reference_number})</SelectItem>)}</SelectContent>
+            <div><Label>Client</Label>
+              <Select value={clientForm.client_id} onValueChange={v => setClientForm(f => ({ ...f, client_id: v }))}>
+                <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
+                <SelectContent>{allClients?.filter(c => !projectClients?.some(pc => pc.client_id === c.id)).map(c => <SelectItem key={c.id} value={c.id}>{c.name} ({c.reference_number})</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div><Label>Role (optional)</Label><Input value={supplierForm.role} onChange={e => setSupplierForm(f => ({ ...f, role: e.target.value }))} placeholder="e.g. Material Supplier" /></div>
-            <div><Label>Notes (optional)</Label><Textarea value={supplierForm.notes} onChange={e => setSupplierForm(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>
+            <div><Label>Role (optional)</Label><Input value={clientForm.role} onChange={e => setClientForm(f => ({ ...f, role: e.target.value }))} placeholder="e.g. Primary Client" /></div>
+            <div><Label>Notes (optional)</Label><Textarea value={clientForm.notes} onChange={e => setClientForm(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>
           </div>
-          <DialogFooter><Button variant="outline" onClick={() => setSupplierDialog(false)}>Cancel</Button><Button onClick={() => addSupplierMutation.mutate()} disabled={!supplierForm.supplier_id}>Add Supplier</Button></DialogFooter>
+          <DialogFooter><Button variant="outline" onClick={() => setClientDialog(false)}>Cancel</Button><Button onClick={() => addClientMutation.mutate()} disabled={!clientForm.client_id}>Add Client</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
