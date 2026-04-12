@@ -14,7 +14,196 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      clients: {
+        Row: {
+          address: string | null
+          company: string | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          company?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          company?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      project_files: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          file_type: string | null
+          id: string
+          project_id: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          project_id?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          project_id?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_files_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_files_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_tasks: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          priority: string
+          project_id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string
+          project_id: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string
+          project_id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          budget: number | null
+          client_id: string | null
+          created_at: string
+          description: string | null
+          end_date: string | null
+          id: string
+          name: string
+          priority: string
+          progress: number
+          start_date: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          budget?: number | null
+          client_id?: string | null
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name: string
+          priority?: string
+          progress?: number
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          budget?: number | null
+          client_id?: string | null
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name?: string
+          priority?: string
+          progress?: number
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
