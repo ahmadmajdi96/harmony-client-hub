@@ -28,38 +28,39 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-violet-950 to-slate-950 p-4">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-violet-900/20 via-transparent to-transparent" />
-      <Card className="w-full max-w-md relative z-10 border-white/10 bg-white/5 backdrop-blur-2xl shadow-2xl">
-        <CardHeader className="text-center space-y-3">
-          <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-violet-500/20">
-            <span className="text-white font-bold text-xl">C</span>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 via-violet-50 to-rose-50 p-4">
+      <Card className="w-full max-w-md border-border/50 shadow-xl shadow-primary/5 bg-card/90 backdrop-blur-sm">
+        <CardHeader className="text-center space-y-4 pb-2">
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-md shadow-primary/15">
+            <span className="text-primary-foreground font-bold text-xl">C</span>
           </div>
-          <CardTitle className="text-2xl font-bold text-white">Welcome Back</CardTitle>
-          <CardDescription className="text-violet-200/60">Sign in to CORTA-PM</CardDescription>
+          <div>
+            <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
+            <CardDescription className="mt-1">Sign in to CORTA-PM</CardDescription>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-4">
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-violet-100/80">Email</Label>
+              <Label>Email</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-violet-300/40" />
-                <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@company.com" className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-violet-400/50" required />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+                <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@company.com" className="pl-10 rounded-xl h-11" required />
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-violet-100/80">Password</Label>
+              <Label>Password</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-violet-300/40" />
-                <Input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-violet-400/50" required />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+                <Input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" className="pl-10 rounded-xl h-11" required />
               </div>
             </div>
-            <Button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-violet-600 to-fuchsia-500 hover:from-violet-500 hover:to-fuchsia-400 text-white font-medium shadow-lg shadow-violet-500/20 h-11">
+            <Button type="submit" disabled={loading} className="w-full rounded-xl h-11 font-medium shadow-sm">
               {loading ? "Signing in..." : <><span>Sign In</span><ArrowRight className="ml-2 h-4 w-4" /></>}
             </Button>
           </form>
-          <p className="text-center text-sm text-violet-200/40 mt-6">
-            Don't have an account? <Link to="/signup" className="text-violet-400 hover:text-violet-300 font-medium">Sign up</Link>
+          <p className="text-center text-sm text-muted-foreground mt-6">
+            Don't have an account? <Link to="/signup" className="text-primary hover:underline font-medium">Sign up</Link>
           </p>
         </CardContent>
       </Card>
