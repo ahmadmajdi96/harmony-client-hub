@@ -21,7 +21,7 @@ import Employees from "./pages/Employees";
 import EmployeeDetail from "./pages/EmployeeDetail";
 import AIPage from "./pages/AIPage";
 import Login from "./pages/Login";
-import Signup from "./pages/Signup";
+
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -56,7 +56,6 @@ const App = () => (
           <Routes>
             <Route element={<PublicRoute />}>
               <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
             </Route>
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<Dashboard />} />
