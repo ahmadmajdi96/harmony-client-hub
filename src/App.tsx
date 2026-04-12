@@ -16,6 +16,7 @@ import Tasks from "./pages/Tasks";
 import FileManager from "./pages/FileManager";
 import ActivityLog from "./pages/ActivityLog";
 import Reports from "./pages/Reports";
+import DataExport from "./pages/DataExport";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
