@@ -37,6 +37,8 @@ export default function Projects() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [priorityFilter, setPriorityFilter] = useState("all");
   const [form, setForm] = useState({ name: "", description: "", status: "planning", priority: "medium", budget: "", start_date: "", end_date: "", client_id: "", progress: 0 });
 
   const { data: projects, isLoading } = useQuery({
