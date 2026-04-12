@@ -10,7 +10,7 @@ import { FolderKanban, Users, ListChecks, TrendingUp, Clock, Activity, Truck, Do
 import { Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
-import cortaLogo from "@/assets/corta-logo.png";
+
 
 const statusVariant = (s: string) => {
   if (s === "completed" || s === "active" || s === "done") return "success" as const;
