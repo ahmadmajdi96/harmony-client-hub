@@ -81,6 +81,7 @@ export default function Clients() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Ref</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Company</TableHead>
                   <TableHead>Email</TableHead>
@@ -92,6 +93,7 @@ export default function Clients() {
               <TableBody>
                 {clients?.map(c => (
                   <TableRow key={c.id}>
+                    <TableCell className="font-mono text-xs text-muted-foreground">{c.reference_number}</TableCell>
                     <TableCell className="font-medium">{c.name}</TableCell>
                     <TableCell className="text-muted-foreground">{c.company || "—"}</TableCell>
                     <TableCell className="text-muted-foreground">{c.email || "—"}</TableCell>
@@ -107,7 +109,7 @@ export default function Clients() {
                   </TableRow>
                 ))}
                 {!isLoading && (!clients || clients.length === 0) && (
-                  <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No clients yet. Click "Add Client" to get started.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No clients yet. Click "Add Client" to get started.</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
