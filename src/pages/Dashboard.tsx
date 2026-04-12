@@ -20,7 +20,7 @@ const statusVariant = (s: string) => {
 
 const actionColors: Record<string, string> = {
   created: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-  updated: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+  updated: "bg-violet-500/10 text-violet-600 border-violet-500/20",
   deleted: "bg-red-500/10 text-red-600 border-red-500/20",
 };
 
@@ -96,7 +96,6 @@ export default function Dashboard() {
         subtitle="Here's what's happening across your projects today"
       />
       <div className="p-6 space-y-6">
-        {/* KPI Cards */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {[
             { title: "Projects", value: String(projects?.length || 0), icon: FolderKanban, status: "info" as const },
@@ -113,7 +112,6 @@ export default function Dashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Recent Projects */}
           <Card className="lg:col-span-2 animate-fade-in border-0 shadow-sm" style={{ animationDelay: "100ms" }}>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -153,7 +151,6 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Activity Feed */}
           <Card className="animate-fade-in border-0 shadow-sm" style={{ animationDelay: "200ms" }}>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -187,7 +184,6 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* Pending Tasks */}
         <Card className="animate-fade-in border-0 shadow-sm" style={{ animationDelay: "300ms" }}>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">

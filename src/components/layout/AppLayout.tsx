@@ -4,8 +4,8 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   LayoutDashboard, FolderKanban, Users, FileText, ListChecks,
-  ChevronLeft, ChevronRight, Settings, BarChart3, Truck, Activity,
-  HardHat, LogOut,
+  ChevronLeft, ChevronRight, BarChart3, Truck, Activity,
+  LogOut,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -18,7 +18,6 @@ const navItems = [
   { path: "/files", label: "File Manager", icon: FileText },
   { path: "/activity", label: "Activity Log", icon: Activity },
   { path: "/reports", label: "Reports", icon: BarChart3 },
-  { path: "/settings", label: "Settings", icon: Settings },
 ];
 
 export default function AppLayout() {
@@ -33,20 +32,18 @@ export default function AppLayout() {
         "bg-sidebar text-sidebar-foreground",
         collapsed ? "w-[72px]" : "w-[260px]"
       )}>
-        {/* Brand */}
         <div className="flex items-center gap-3 h-16 shrink-0 border-b border-sidebar-border/50 px-5">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/25">
-            <HardHat className="h-5 w-5 text-white" />
+          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center shrink-0 shadow-lg shadow-violet-500/25">
+            <span className="text-white font-bold text-sm">C</span>
           </div>
           {!collapsed && (
             <div className="animate-fade-in">
-              <span className="font-bold text-[15px] text-sidebar-accent-foreground tracking-tight leading-none block">HarmonyHub</span>
-              <span className="text-[10px] text-sidebar-foreground/60 font-medium tracking-widest uppercase">Engineering</span>
+              <span className="font-bold text-[15px] text-sidebar-accent-foreground tracking-tight leading-none block">CORTA-PM</span>
+              <span className="text-[10px] text-sidebar-foreground/60 font-medium tracking-widest uppercase">Management</span>
             </div>
           )}
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
           {navItems.map((item) => {
             const isActive = item.path === "/" ? location.pathname === "/" : location.pathname === item.path || location.pathname.startsWith(item.path + "/");
@@ -66,7 +63,6 @@ export default function AppLayout() {
           })}
         </nav>
 
-        {/* User & Logout */}
         <div className="border-t border-sidebar-border/50 p-3 space-y-2">
           {!collapsed && user && (
             <div className="px-3 py-2">
@@ -84,7 +80,6 @@ export default function AppLayout() {
           </button>
         </div>
 
-        {/* Collapse toggle */}
         <button onClick={() => setCollapsed(!collapsed)}
           className="flex items-center justify-center h-11 border-t border-sidebar-border/50 text-sidebar-foreground/50 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent/40 transition-all duration-200">
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
