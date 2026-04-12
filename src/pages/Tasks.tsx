@@ -164,8 +164,7 @@ export default function Tasks() {
     const matchesProject = projectFilter === "all" || t.project_id === projectFilter;
     const matchesEmployee = employeeFilter === "all" || taskEmployees?.some((te: any) => te.task_id === t.id && te.employee_id === employeeFilter);
     const matchesClient = clientFilter === "all" || (() => {
-      const project = tasks?.find(task => task.id === t.id);
-      const proj = projects?.find(p => p.id === t.project_id) as any;
+      const proj = projects?.find(p => p.id === t.project_id);
       return proj?.client_id === clientFilter;
     })();
     return matchesSearch && matchesPriority && matchesProject && matchesEmployee && matchesClient;
