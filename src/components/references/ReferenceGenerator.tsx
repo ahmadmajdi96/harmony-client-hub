@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,11 +24,13 @@ interface ProjectOption {
 
 export default function ReferenceGenerator({ onGenerated }: Props) {
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const preselectedProjectId = searchParams.get("project");
   const [docType, setDocType] = useState("");
   const [company, setCompany] = useState("");
   const [client, setClient] = useState("");
   const [projectName, setProjectName] = useState("");
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(preselectedProjectId);
   const [activity, setActivity] = useState("");
   const [revisionMode, setRevisionMode] = useState<"auto" | "manual">("auto");
   const [manualRevision, setManualRevision] = useState("00");
