@@ -1,3 +1,11 @@
-# Welcome to your Lovable project
+# CORTA-PM
 
-TODO: Document your project here
+A comprehensive project and client management platform.
+
+## Getting Started
+
+```bash
+docker compose up
+```
+
+The app will be available at `http://localhost:6699`.
