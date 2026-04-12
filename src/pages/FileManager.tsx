@@ -5,19 +5,22 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { KPICard } from "@/components/shared/KPICard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Download, Trash2, FileText, HardDrive, Image, FileArchive } from "lucide-react";
+import { Upload, Download, Trash2, FileText, HardDrive, Image, FileArchive, Search } from "lucide-react";
 
 export default function FileManager() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
-  const [filter, setFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [projectFilter, setProjectFilter] = useState("all");
+  const [search, setSearch] = useState("");
   const [uploadDialog, setUploadDialog] = useState(false);
   const [uploadClientId, setUploadClientId] = useState("");
   const [uploadProjectId, setUploadProjectId] = useState("");
@@ -67,13 +70,8 @@ export default function FileManager() {
         const { error: uploadError } = await supabase.storage.from("project-files").upload(filePath, file);
         if (uploadError) throw uploadError;
         const { error: dbError } = await supabase.from("project_files").insert({
-          file_name: file.name,
-          file_path: filePath,
-          file_size: file.size,
-          file_type: file.type,
-          uploaded_by: "System",
-          client_id: uploadClientId || null,
-          project_id: uploadProjectId || null,
+          file_name: file.name, file_path: filePath, file_size: file.size, file_type: file.type, uploaded_by: "System",
+          client_id: uploadClientId || null, project_id: uploadProjectId || null,
         });
         if (dbError) throw dbError;
       }
@@ -120,10 +118,11 @@ export default function FileManager() {
   const imageFiles = files?.filter(f => f.file_type?.startsWith("image/")).length || 0;
   const docFiles = files?.filter(f => f.file_type?.includes("pdf") || f.file_type?.includes("document") || f.file_type?.includes("text")).length || 0;
 
-  const filteredFiles = filter === "all" ? files : files?.filter(f => {
-    if (filter === "images") return f.file_type?.startsWith("image/");
-    if (filter === "documents") return f.file_type?.includes("pdf") || f.file_type?.includes("document") || f.file_type?.includes("text");
-    return true;
+  const filteredFiles = files?.filter(f => {
+    const matchesSearch = !search || f.file_name.toLowerCase().includes(search.toLowerCase()) || (f as any).projects?.name?.toLowerCase().includes(search.toLowerCase()) || (f as any).clients?.name?.toLowerCase().includes(search.toLowerCase());
+    const matchesType = typeFilter === "all" || (typeFilter === "images" && f.file_type?.startsWith("image/")) || (typeFilter === "documents" && (f.file_type?.includes("pdf") || f.file_type?.includes("document") || f.file_type?.includes("text")));
+    const matchesProject = projectFilter === "all" || f.project_id === projectFilter;
+    return matchesSearch && matchesType && matchesProject;
   });
 
   return (
@@ -137,20 +136,32 @@ export default function FileManager() {
           <KPICard title="Documents" value={String(docFiles)} icon={FileArchive} status="info" />
         </div>
 
-        <div className="flex items-center justify-between">
-          <Select value={filter} onValueChange={setFilter}>
-            <SelectTrigger className="w-48"><SelectValue placeholder="Filter by type" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Files</SelectItem>
-              <SelectItem value="images">Images</SelectItem>
-              <SelectItem value="documents">Documents</SelectItem>
-            </SelectContent>
-          </Select>
+        {/* Search & Filters */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 justify-between">
+          <div className="flex flex-col sm:flex-row gap-3 flex-1">
+            <div className="relative max-w-sm flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Search files..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+            </div>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="images">Images</SelectItem>
+                <SelectItem value="documents">Documents</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={projectFilter} onValueChange={setProjectFilter}>
+              <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Projects</SelectItem>
+                {projects?.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
           <div>
             <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
-            <Button onClick={() => fileInputRef.current?.click()}>
-              <Upload className="h-4 w-4 mr-2" /> Upload Files
-            </Button>
+            <Button onClick={() => fileInputRef.current?.click()}><Upload className="h-4 w-4 mr-2" /> Upload Files</Button>
           </div>
         </div>
 
@@ -188,9 +199,7 @@ export default function FileManager() {
           <div className="space-y-4">
             <div className="rounded-md border p-3 bg-muted/50">
               <p className="text-sm font-medium mb-1">Selected files:</p>
-              {pendingFiles.map((f, i) => (
-                <p key={i} className="text-xs text-muted-foreground">{f.name} ({formatSize(f.size)})</p>
-              ))}
+              {pendingFiles.map((f, i) => (<p key={i} className="text-xs text-muted-foreground">{f.name} ({formatSize(f.size)})</p>))}
             </div>
             <div>
               <Label>Assign to Client (optional)</Label>
@@ -215,9 +224,7 @@ export default function FileManager() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setUploadDialog(false)}>Cancel</Button>
-            <Button onClick={handleUploadConfirm} disabled={uploading}>
-              <Upload className="h-4 w-4 mr-2" /> {uploading ? "Uploading..." : "Upload"}
-            </Button>
+            <Button onClick={handleUploadConfirm} disabled={uploading}><Upload className="h-4 w-4 mr-2" /> {uploading ? "Uploading..." : "Upload"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

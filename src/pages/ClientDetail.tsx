@@ -11,7 +11,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Trash2, Download, FileText, FolderKanban, Mail, Phone, MapPin, Building, Hash, DollarSign, Calendar } from "lucide-react";
+import { Upload, Trash2, Download, FileText, FolderKanban, Mail, Phone, MapPin, Building, Hash, DollarSign, Calendar, Clock } from "lucide-react";
+import { format } from "date-fns";
 
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
@@ -55,6 +56,35 @@ export default function ClientDetail() {
     },
     enabled: !!id,
   });
+
+  const { data: activities } = useQuery({
+    queryKey: ["client-activities", id],
+    queryFn: async () => {
+      const { data } = await supabase.from("activity_log").select("*").eq("entity_type", "client").eq("entity_id", id!).order("created_at", { ascending: false }).limit(50);
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
+  const { data: projectActivities } = useQuery({
+    queryKey: ["client-project-activities", id, projects],
+    queryFn: async () => {
+      if (!projects?.length) return [];
+      const projectIds = projects.map((p: any) => p.id);
+      const { data } = await supabase.from("activity_log").select("*").in("entity_id", projectIds).order("created_at", { ascending: false }).limit(50);
+      return data || [];
+    },
+    enabled: !!id && !!projects?.length,
+  });
+
+  const allActivities = [...(activities || []), ...(projectActivities || [])].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  const actionColor = (action: string) => {
+    if (action === "created") return "text-emerald-500";
+    if (action === "updated") return "text-blue-500";
+    if (action === "deleted") return "text-red-500";
+    return "text-muted-foreground";
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadFiles = e.target.files;
@@ -164,7 +194,11 @@ export default function ClientDetail() {
         )}
 
         <Tabs defaultValue="projects">
-          <TabsList><TabsTrigger value="projects"><FolderKanban className="h-4 w-4 mr-1" /> Projects ({projects?.length || 0})</TabsTrigger><TabsTrigger value="files"><FileText className="h-4 w-4 mr-1" /> Files ({files?.length || 0})</TabsTrigger></TabsList>
+          <TabsList>
+            <TabsTrigger value="projects"><FolderKanban className="h-4 w-4 mr-1" /> Projects ({projects?.length || 0})</TabsTrigger>
+            <TabsTrigger value="files"><FileText className="h-4 w-4 mr-1" /> Files ({files?.length || 0})</TabsTrigger>
+            <TabsTrigger value="activity"><Clock className="h-4 w-4 mr-1" /> Activity ({allActivities.length})</TabsTrigger>
+          </TabsList>
 
           <TabsContent value="projects">
             <Card><CardContent className="p-0">
@@ -213,6 +247,42 @@ export default function ClientDetail() {
                 </TableBody>
               </Table>
             </CardContent></Card>
+          </TabsContent>
+
+          <TabsContent value="activity">
+            <Card>
+              <CardContent className="p-4">
+                {allActivities.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-6">No activity recorded yet.</p>
+                ) : (
+                  <div className="relative">
+                    <div className="absolute left-4 top-0 bottom-0 w-px bg-border" />
+                    <div className="space-y-4">
+                      {allActivities.map((activity) => (
+                        <div key={activity.id} className="relative pl-10">
+                          <div className={`absolute left-2.5 top-1.5 w-3 h-3 rounded-full border-2 border-background ${
+                            activity.action === "created" ? "bg-emerald-500" :
+                            activity.action === "updated" ? "bg-blue-500" :
+                            activity.action === "deleted" ? "bg-red-500" : "bg-muted-foreground"
+                          }`} />
+                          <div className="p-3 rounded-lg border bg-card hover:shadow-sm transition-shadow">
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-2">
+                                <span className={`text-xs font-semibold uppercase ${actionColor(activity.action)}`}>{activity.action}</span>
+                                <span className="text-xs text-muted-foreground">·</span>
+                                <span className="text-xs font-medium text-muted-foreground capitalize">{activity.entity_type}</span>
+                              </div>
+                              <span className="text-xs text-muted-foreground">{format(new Date(activity.created_at), "MMM d, yyyy · h:mm a")}</span>
+                            </div>
+                            <p className="text-sm">{activity.description || `${activity.entity_name || "Item"} was ${activity.action}`}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
