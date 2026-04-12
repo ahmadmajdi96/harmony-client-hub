@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,6 +25,7 @@ import {
   Clock, BarChart3, TrendingUp, PieChart, CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import html2canvas from "html2canvas";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { saveAs } from "file-saver";
@@ -880,7 +881,16 @@ export default function Employees() {
 
           {/* ═══════ ANALYTICS TAB ═══════ */}
           <TabsContent value="analytics" className="space-y-4 mt-4">
-            {/* Summary KPIs */}
+            {/* Export buttons */}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" className="gap-2" onClick={handleExportAnalyticsImage}>
+                <Download className="w-4 h-4" /> Export as Image
+              </Button>
+              <Button variant="outline" size="sm" className="gap-2" onClick={handleExportAnalyticsPDF}>
+                <Download className="w-4 h-4" /> Export as PDF
+              </Button>
+            </div>
+            <div ref={analyticsRef}>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <Card className="p-4">
                 <div className="flex items-center gap-3">
