@@ -194,7 +194,11 @@ export default function ClientDetail() {
         )}
 
         <Tabs defaultValue="projects">
-          <TabsList><TabsTrigger value="projects"><FolderKanban className="h-4 w-4 mr-1" /> Projects ({projects?.length || 0})</TabsTrigger><TabsTrigger value="files"><FileText className="h-4 w-4 mr-1" /> Files ({files?.length || 0})</TabsTrigger></TabsList>
+          <TabsList>
+            <TabsTrigger value="projects"><FolderKanban className="h-4 w-4 mr-1" /> Projects ({projects?.length || 0})</TabsTrigger>
+            <TabsTrigger value="files"><FileText className="h-4 w-4 mr-1" /> Files ({files?.length || 0})</TabsTrigger>
+            <TabsTrigger value="activity"><Clock className="h-4 w-4 mr-1" /> Activity ({allActivities.length})</TabsTrigger>
+          </TabsList>
 
           <TabsContent value="projects">
             <Card><CardContent className="p-0">
