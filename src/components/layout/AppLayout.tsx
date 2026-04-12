@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
+import cortaLogo from "@/assets/corta-logo.png";
 
 const navItems = [
   { path: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -48,8 +49,8 @@ export default function AppLayout() {
     <>
       {/* Brand */}
       <div className="flex items-center gap-3 h-[68px] shrink-0 px-5">
-        <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-violet-400 flex items-center justify-center shrink-0 shadow-lg shadow-primary/15 ring-2 ring-primary/10">
-          <span className="text-primary-foreground font-bold text-base tracking-tight">C</span>
+        <div className="h-10 w-10 rounded-2xl flex items-center justify-center shrink-0">
+          <img src={cortaLogo} alt="CORTA-PM" className="h-10 w-10 object-contain" />
         </div>
         {(!collapsed || isMobile) && (
           <div>
@@ -156,6 +157,13 @@ export default function AppLayout() {
             </Tooltip>
           )}
         </div>
+
+        {/* Powered by Cortanex AI */}
+        {(!collapsed || isMobile) && (
+          <p className="text-center text-[10px] text-muted-foreground/50 pt-1">
+            Powered by <span className="font-semibold text-muted-foreground/70">Cortanex AI</span>
+          </p>
+        )}
       </div>
     </>
   );
@@ -213,9 +221,7 @@ export default function AppLayout() {
               <Menu className="h-5 w-5" />
             </button>
             <div className="flex items-center gap-2.5 ml-3">
-              <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-primary via-primary/90 to-violet-400 flex items-center justify-center shadow-sm">
-                <span className="text-primary-foreground font-bold text-[10px]">C</span>
-              </div>
+              <img src={cortaLogo} alt="CORTA-PM" className="h-7 w-7 object-contain" />
               <span className="font-bold text-sm text-foreground tracking-tight">CORTA-PM</span>
             </div>
           </div>

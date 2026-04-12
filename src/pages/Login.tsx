@@ -5,9 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Mail, Lock, ArrowRight } from "lucide-react";
-import logoIcon from "@/assets/logo-icon.png";
+import cortaLogo from "@/assets/corta-logo.png";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -32,8 +32,8 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 via-violet-50 to-rose-50 p-4">
       <Card className="w-full max-w-md border-border/50 shadow-xl shadow-primary/5 bg-card/90 backdrop-blur-sm">
         <CardHeader className="text-center space-y-4 pb-2">
-          <div className="mx-auto w-16 h-16 flex items-center justify-center">
-            <img src={logoIcon} alt="Cortanex AI Logo" className="w-16 h-16 object-contain" />
+          <div className="mx-auto w-20 h-20 flex items-center justify-center">
+            <img src={cortaLogo} alt="Cortanex AI Logo" className="w-20 h-20 object-contain" />
           </div>
           <div>
             <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
@@ -60,10 +60,7 @@ export default function Login() {
               {loading ? "Signing in..." : <><span>Sign In</span><ArrowRight className="ml-2 h-4 w-4" /></>}
             </Button>
           </form>
-          <p className="text-center text-sm text-muted-foreground mt-6">
-            Don't have an account? <Link to="/signup" className="text-primary hover:underline font-medium">Sign up</Link>
-          </p>
-          <p className="text-center text-xs text-muted-foreground/60 mt-4">
+          <p className="text-center text-xs text-muted-foreground/60 mt-6">
             Powered by <span className="font-semibold text-muted-foreground/80">Cortanex AI</span>
           </p>
         </CardContent>
