@@ -24,6 +24,7 @@ export type Database = {
           name: string
           notes: string | null
           phone: string | null
+          reference_number: string | null
           status: string
           updated_at: string
         }
@@ -36,6 +37,7 @@ export type Database = {
           name: string
           notes?: string | null
           phone?: string | null
+          reference_number?: string | null
           status?: string
           updated_at?: string
         }
@@ -48,6 +50,7 @@ export type Database = {
           name?: string
           notes?: string | null
           phone?: string | null
+          reference_number?: string | null
           status?: string
           updated_at?: string
         }
@@ -100,6 +103,48 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_suppliers: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          project_id: string
+          role: string | null
+          supplier_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          project_id: string
+          role?: string | null
+          supplier_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          project_id?: string
+          role?: string | null
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_suppliers_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_suppliers_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
@@ -162,6 +207,7 @@ export type Database = {
           name: string
           priority: string
           progress: number
+          reference_number: string | null
           start_date: string | null
           status: string
           updated_at: string
@@ -176,6 +222,7 @@ export type Database = {
           name: string
           priority?: string
           progress?: number
+          reference_number?: string | null
           start_date?: string | null
           status?: string
           updated_at?: string
@@ -190,6 +237,7 @@ export type Database = {
           name?: string
           priority?: string
           progress?: number
+          reference_number?: string | null
           start_date?: string | null
           status?: string
           updated_at?: string
@@ -203,6 +251,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      suppliers: {
+        Row: {
+          address: string | null
+          company: string | null
+          contact_person: string | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          reference_number: string | null
+          status: string
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          company?: string | null
+          contact_person?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          reference_number?: string | null
+          status?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          company?: string | null
+          contact_person?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          reference_number?: string | null
+          status?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
       }
     }
     Views: {

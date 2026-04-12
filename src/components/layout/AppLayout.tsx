@@ -12,16 +12,18 @@ import {
   Zap,
   Settings,
   BarChart3,
+  Truck,
 } from "lucide-react";
 
 const navItems = [
   { path: "/", label: "Dashboard", icon: LayoutDashboard, num: "01" },
   { path: "/projects", label: "Projects", icon: FolderKanban, num: "02" },
   { path: "/clients", label: "Clients", icon: Users, num: "03" },
-  { path: "/tasks", label: "Tasks", icon: ListChecks, num: "04" },
-  { path: "/files", label: "File Manager", icon: FileText, num: "05" },
-  { path: "/reports", label: "Reports", icon: BarChart3, num: "06" },
-  { path: "/settings", label: "Settings", icon: Settings, num: "07" },
+  { path: "/suppliers", label: "Suppliers", icon: Truck, num: "04" },
+  { path: "/tasks", label: "Tasks", icon: ListChecks, num: "05" },
+  { path: "/files", label: "File Manager", icon: FileText, num: "06" },
+  { path: "/reports", label: "Reports", icon: BarChart3, num: "07" },
+  { path: "/settings", label: "Settings", icon: Settings, num: "08" },
 ];
 
 export default function AppLayout() {

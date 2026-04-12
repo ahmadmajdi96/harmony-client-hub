@@ -9,6 +9,8 @@ import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
 import Clients from "./pages/Clients";
 import ClientDetail from "./pages/ClientDetail";
+import Suppliers from "./pages/Suppliers";
+import SupplierDetail from "./pages/SupplierDetail";
 import Tasks from "./pages/Tasks";
 import FileManager from "./pages/FileManager";
 import Reports from "./pages/Reports";
@@ -30,6 +32,8 @@ const App = () => (
             <Route path="/projects/:id" element={<ProjectDetail />} />
             <Route path="/clients" element={<Clients />} />
             <Route path="/clients/:id" element={<ClientDetail />} />
+            <Route path="/suppliers" element={<Suppliers />} />
+            <Route path="/suppliers/:id" element={<SupplierDetail />} />
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/files" element={<FileManager />} />
             <Route path="/reports" element={<Reports />} />

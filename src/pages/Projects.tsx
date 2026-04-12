@@ -131,7 +131,10 @@ export default function Projects() {
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="font-semibold text-sm">{p.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-sm">{p.name}</h3>
+                      <span className="text-[10px] font-mono text-muted-foreground">{p.reference_number}</span>
+                    </div>
                     <p className="text-xs text-muted-foreground mt-0.5">{(p as any).clients?.name || "No client"}</p>
                   </div>
                   <StatusBadge status={p.status} variant={statusVariant(p.status)} />
