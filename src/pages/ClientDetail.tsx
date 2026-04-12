@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, Trash2, Download, FileText, FolderKanban, Mail, Phone, MapPin, Building, Hash, DollarSign, Calendar, Clock } from "lucide-react";
+import { triggerBrowserDownload } from "@/lib/download";
 import { format } from "date-fns";
 
 export default function ClientDetail() {
@@ -124,11 +125,7 @@ export default function ClientDetail() {
 
   const downloadFile = (filePath: string, fileName: string) => {
     const { data } = supabase.storage.from("project-files").getPublicUrl(filePath);
-    const a = document.createElement("a");
-    a.href = data.publicUrl;
-    a.download = fileName;
-    a.target = "_blank";
-    a.click();
+    triggerBrowserDownload(data.publicUrl, fileName);
   };
 
   const formatSize = (bytes: number | null) => {

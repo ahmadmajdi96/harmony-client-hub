@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
+import ReferenceGenerator from "@/components/references/ReferenceGenerator";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -18,6 +19,7 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Upload, Trash2, Pencil, Download, FileText, ListChecks, Truck, Calendar, DollarSign, Hash, Users, BarChart3, Building, Users2, X } from "lucide-react";
+import { triggerBrowserDownload } from "@/lib/download";
 
 const statusVariant = (s: string) => {
   if (s === "done" || s === "completed") return "success" as const;
@@ -44,6 +46,7 @@ export default function ProjectDetail() {
   const [empFormId, setEmpFormId] = useState("");
   const [empFormRole, setEmpFormRole] = useState("");
   const [taskEmpId, setTaskEmpId] = useState("");
+  const [refDialog, setRefDialog] = useState(false);
 
   const { data: project } = useQuery({
     queryKey: ["project", id],
@@ -318,11 +321,7 @@ export default function ProjectDetail() {
 
   const downloadFile = (filePath: string, fileName: string) => {
     const { data } = supabase.storage.from("project-files").getPublicUrl(filePath);
-    const a = document.createElement("a");
-    a.href = data.publicUrl;
-    a.download = fileName;
-    a.target = "_blank";
-    a.click();
+    triggerBrowserDownload(data.publicUrl, fileName);
   };
 
   const openAddTask = () => { setEditingTaskId(null); setTaskForm({ title: "", description: "", status: "todo", priority: "medium", assigned_to: "", due_date: "" }); setTaskDialog(true); };
@@ -511,9 +510,7 @@ export default function ProjectDetail() {
 
           <TabsContent value="references">
             <div className="flex justify-end mb-4">
-              <Link to={`/references?project=${id}`}>
-                <Button size="sm"><Plus className="h-4 w-4 mr-1" /> Generate Reference</Button>
-              </Link>
+              <Button size="sm" onClick={() => setRefDialog(true)}><Plus className="h-4 w-4 mr-1" /> Generate Reference</Button>
             </div>
             <Card><CardContent className="p-0">
               <Table>
@@ -647,6 +644,26 @@ export default function ProjectDetail() {
             <div><Label>Notes (optional)</Label><Textarea value={clientForm.notes} onChange={e => setClientForm(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>
           </div>
           <DialogFooter><Button variant="outline" onClick={() => setClientDialog(false)}>Cancel</Button><Button onClick={() => addClientMutation.mutate()} disabled={!clientForm.client_id}>Add Client</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Generate Reference Dialog */}
+      <Dialog open={refDialog} onOpenChange={setRefDialog}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Generate Document Reference</DialogTitle>
+            <DialogDescription>Generate a reference number for {project.name}</DialogDescription>
+          </DialogHeader>
+          <ReferenceGenerator
+            compact
+            prefilledProjectId={id}
+            prefilledProjectName={project.name}
+            prefilledClientName={(project as any).clients?.name}
+            onGenerated={() => {
+              refetchRefs();
+              setRefDialog(false);
+            }}
+          />
         </DialogContent>
       </Dialog>
     </div>

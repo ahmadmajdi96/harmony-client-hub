@@ -15,6 +15,12 @@ import {
 
 interface Props {
   onGenerated: () => void;
+  /** Pre-fill project (for inline usage in ProjectDetail) */
+  prefilledProjectId?: string;
+  prefilledProjectName?: string;
+  prefilledClientName?: string;
+  /** If true, hides the card wrapper (used inside dialogs) */
+  compact?: boolean;
 }
 
 interface ProjectOption {
@@ -23,64 +29,81 @@ interface ProjectOption {
   client_name?: string;
 }
 
-export default function ReferenceGenerator({ onGenerated }: Props) {
+interface ClientOption {
+  id: string;
+  name: string;
+}
+
+export default function ReferenceGenerator({ onGenerated, prefilledProjectId, prefilledProjectName, prefilledClientName, compact }: Props) {
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
-  const preselectedProjectId = searchParams.get("project");
+  const urlProjectId = searchParams.get("project");
+  const initialProjectId = prefilledProjectId || urlProjectId;
+
   const [docType, setDocType] = useState("");
   const [company, setCompany] = useState("");
-  const [client, setClient] = useState("");
-  const [projectName, setProjectName] = useState("");
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(preselectedProjectId);
+  const [selectedClientId, setSelectedClientId] = useState("");
+  const [clientName, setClientName] = useState(prefilledClientName || "");
+  const [projectName, setProjectName] = useState(prefilledProjectName || "");
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(initialProjectId || null);
   const [activity, setActivity] = useState("");
   const [revisionMode, setRevisionMode] = useState<"auto" | "manual">("auto");
   const [manualRevision, setManualRevision] = useState("00");
   const [generatedRef, setGeneratedRef] = useState("");
   const [loading, setLoading] = useState(false);
   const [projects, setProjects] = useState<ProjectOption[]>([]);
+  const [clients, setClients] = useState<ClientOption[]>([]);
 
   const now = new Date();
   const year = String(now.getFullYear()).slice(-2);
   const month = String(now.getMonth() + 1).padStart(2, "0");
 
-  const clientShort = useMemo(() => shortenName(client), [client]);
+  const clientShort = useMemo(() => shortenName(clientName), [clientName]);
   const projectShort = useMemo(() => shortenName(projectName), [projectName]);
 
-  const canGenerate = docType && company && client && projectName && activity;
+  const canGenerate = docType && company && clientName && projectName && activity;
 
   useEffect(() => {
-    const loadProjects = async () => {
-      const { data } = await supabase
-        .from("projects")
-        .select("id, name, client_id")
-        .order("name");
-      
-      if (data) {
-        const { data: clients } = await supabase.from("clients").select("id, name");
-        const clientMap = new Map((clients || []).map(c => [c.id, c.name]));
-        
-        const mapped = data.map(p => ({
+    const load = async () => {
+      const [{ data: projData }, { data: clientData }] = await Promise.all([
+        supabase.from("projects").select("id, name, client_id").order("name"),
+        supabase.from("clients").select("id, name").order("name"),
+      ]);
+
+      const clientList = clientData || [];
+      setClients(clientList);
+      const clientMap = new Map(clientList.map(c => [c.id, c.name]));
+
+      if (projData) {
+        const mapped = projData.map(p => ({
           id: p.id,
           name: p.name,
           client_name: p.client_id ? clientMap.get(p.client_id) || undefined : undefined,
         }));
         setProjects(mapped);
 
-        // Auto-select if preselected via URL
-        if (preselectedProjectId) {
-          const proj = mapped.find(p => p.id === preselectedProjectId);
+        if (initialProjectId) {
+          const proj = mapped.find(p => p.id === initialProjectId);
           if (proj) {
             setSelectedProjectId(proj.id);
             setProjectName(proj.name);
             if (proj.client_name) {
-              setClient(proj.client_name);
+              setClientName(proj.client_name);
+              const cl = clientList.find(c => c.name === proj.client_name);
+              if (cl) setSelectedClientId(cl.id);
             }
           }
         }
       }
+
+      // If prefilled client name, find it in client list
+      if (prefilledClientName && !initialProjectId) {
+        const cl = clientList.find(c => c.name === prefilledClientName);
+        if (cl) setSelectedClientId(cl.id);
+      }
     };
-    loadProjects();
-  }, [preselectedProjectId]);
+    load();
+  }, [initialProjectId, prefilledClientName]);
 
   const handleProjectSelect = (projectId: string) => {
     const proj = projects.find(p => p.id === projectId);
@@ -88,9 +111,17 @@ export default function ReferenceGenerator({ onGenerated }: Props) {
       setSelectedProjectId(proj.id);
       setProjectName(proj.name);
       if (proj.client_name) {
-        setClient(proj.client_name);
+        setClientName(proj.client_name);
+        const cl = clients.find(c => c.name === proj.client_name);
+        if (cl) setSelectedClientId(cl.id);
       }
     }
+  };
+
+  const handleClientSelect = (clientId: string) => {
+    setSelectedClientId(clientId);
+    const cl = clients.find(c => c.id === clientId);
+    if (cl) setClientName(cl.name);
   };
 
   const handleGenerate = async () => {
@@ -110,7 +141,7 @@ export default function ReferenceGenerator({ onGenerated }: Props) {
       await insertRecord({
         doc_type: docType,
         company,
-        client,
+        client: clientName,
         client_short: clientShort,
         project_name: projectName,
         project_short: projectShort,
@@ -136,37 +167,34 @@ export default function ReferenceGenerator({ onGenerated }: Props) {
     toast({ title: "Copied!", description: "Reference copied to clipboard." });
   };
 
-  return (
-    <Card className="shadow-lg border-border/60">
-      <CardHeader className="pb-4">
-        <CardTitle className="text-xl font-bold text-foreground">Generate Reference Number</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-5">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="space-y-1.5">
-            <Label>Document Type (A)</Label>
-            <Select value={docType} onValueChange={setDocType}>
-              <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
-              <SelectContent>
-                {DOCUMENT_TYPES.map((d) => (
-                  <SelectItem key={d.code} value={d.code}>{d.label} ({d.code})</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+  const content = (
+    <div className="space-y-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="space-y-1.5">
+          <Label>Document Type (A)</Label>
+          <Select value={docType} onValueChange={setDocType}>
+            <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+            <SelectContent>
+              {DOCUMENT_TYPES.map((d) => (
+                <SelectItem key={d.code} value={d.code}>{d.label} ({d.code})</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-          <div className="space-y-1.5">
-            <Label>Company (B)</Label>
-            <Select value={company} onValueChange={setCompany}>
-              <SelectTrigger><SelectValue placeholder="Select company" /></SelectTrigger>
-              <SelectContent>
-                {COMPANIES.map((c) => (
-                  <SelectItem key={c.code} value={c.code}>{c.label} ({c.code})</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="space-y-1.5">
+          <Label>Company (B)</Label>
+          <Select value={company} onValueChange={setCompany}>
+            <SelectTrigger><SelectValue placeholder="Select company" /></SelectTrigger>
+            <SelectContent>
+              {COMPANIES.map((c) => (
+                <SelectItem key={c.code} value={c.code}>{c.label} ({c.code})</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
+        {!prefilledProjectId && (
           <div className="space-y-1.5">
             <Label>Project (from system)</Label>
             <Select value={selectedProjectId || ""} onValueChange={handleProjectSelect}>
@@ -180,15 +208,24 @@ export default function ReferenceGenerator({ onGenerated }: Props) {
               </SelectContent>
             </Select>
           </div>
+        )}
 
-          <div className="space-y-1.5">
-            <Label>Client Name</Label>
-            <Input value={client} onChange={(e) => setClient(e.target.value)} placeholder="e.g. Saudi Aramco" />
-            {client && (
-              <span className="text-xs text-muted-foreground">Shortened: <strong>{clientShort}</strong></span>
-            )}
-          </div>
+        <div className="space-y-1.5">
+          <Label>Client</Label>
+          <Select value={selectedClientId} onValueChange={handleClientSelect}>
+            <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
+            <SelectContent>
+              {clients.map((c) => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {clientName && (
+            <span className="text-xs text-muted-foreground">Shortened: <strong>{clientShort}</strong></span>
+          )}
+        </div>
 
+        {!prefilledProjectId && (
           <div className="space-y-1.5">
             <Label>Project Name</Label>
             <Input value={projectName} onChange={(e) => { setProjectName(e.target.value); setSelectedProjectId(null); }} placeholder="e.g. Tower Phase 2" />
@@ -196,55 +233,74 @@ export default function ReferenceGenerator({ onGenerated }: Props) {
               <span className="text-xs text-muted-foreground">Shortened: <strong>{projectShort}</strong></span>
             )}
           </div>
+        )}
 
+        {prefilledProjectId && projectName && (
           <div className="space-y-1.5">
-            <Label>Activity</Label>
-            <Select value={activity} onValueChange={setActivity}>
-              <SelectTrigger><SelectValue placeholder="Select activity" /></SelectTrigger>
-              <SelectContent>
-                {ACTIVITIES.map((a) => (
-                  <SelectItem key={a} value={a}>{a}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Revision</Label>
-            <Select value={revisionMode} onValueChange={(v) => setRevisionMode(v as "auto" | "manual")}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="auto">Auto</SelectItem>
-                <SelectItem value="manual">Manual</SelectItem>
-              </SelectContent>
-            </Select>
-            {revisionMode === "manual" && (
-              <Input
-                value={manualRevision}
-                onChange={(e) => setManualRevision(e.target.value.replace(/\D/g, "").slice(0, 2))}
-                placeholder="00"
-                className="mt-1"
-              />
-            )}
-          </div>
-        </div>
-
-        <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
-          <span>Period: <strong>{year}/{month}</strong></span>
-          <span>Format: <strong>AB-Client-Project-Activity-YYMMNNN-xx</strong></span>
-        </div>
-
-        <Button onClick={handleGenerate} disabled={!canGenerate || loading} className="w-full font-semibold text-base h-11">
-          {loading ? "Generating..." : "Generate Reference"}
-        </Button>
-
-        {generatedRef && (
-          <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <code className="text-base sm:text-lg font-bold text-foreground tracking-wide break-all">{generatedRef}</code>
-            <Button variant="outline" size="sm" onClick={handleCopy} className="shrink-0">Copy</Button>
+            <Label>Project Name</Label>
+            <Input value={projectName} disabled className="bg-muted" />
+            <span className="text-xs text-muted-foreground">Shortened: <strong>{projectShort}</strong></span>
           </div>
         )}
-      </CardContent>
+
+        <div className="space-y-1.5">
+          <Label>Activity</Label>
+          <Select value={activity} onValueChange={setActivity}>
+            <SelectTrigger><SelectValue placeholder="Select activity" /></SelectTrigger>
+            <SelectContent>
+              {ACTIVITIES.map((a) => (
+                <SelectItem key={a} value={a}>{a}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Revision</Label>
+          <Select value={revisionMode} onValueChange={(v) => setRevisionMode(v as "auto" | "manual")}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="auto">Auto</SelectItem>
+              <SelectItem value="manual">Manual</SelectItem>
+            </SelectContent>
+          </Select>
+          {revisionMode === "manual" && (
+            <Input
+              value={manualRevision}
+              onChange={(e) => setManualRevision(e.target.value.replace(/\D/g, "").slice(0, 2))}
+              placeholder="00"
+              className="mt-1"
+            />
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
+        <span>Period: <strong>{year}/{month}</strong></span>
+        <span>Format: <strong>AB-Client-Project-Activity-YYMMNNN-xx</strong></span>
+      </div>
+
+      <Button onClick={handleGenerate} disabled={!canGenerate || loading} className="w-full font-semibold text-base h-11">
+        {loading ? "Generating..." : "Generate Reference"}
+      </Button>
+
+      {generatedRef && (
+        <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <code className="text-base sm:text-lg font-bold text-foreground tracking-wide break-all">{generatedRef}</code>
+          <Button variant="outline" size="sm" onClick={handleCopy} className="shrink-0">Copy</Button>
+        </div>
+      )}
+    </div>
+  );
+
+  if (compact) return content;
+
+  return (
+    <Card className="shadow-lg border-border/60">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-xl font-bold text-foreground">Generate Reference Number</CardTitle>
+      </CardHeader>
+      <CardContent>{content}</CardContent>
     </Card>
   );
 }
