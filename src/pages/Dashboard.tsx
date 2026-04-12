@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { FolderKanban, Users, ListChecks, TrendingUp, Clock, Activity, Truck, DollarSign, ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
+import { motion } from "framer-motion";
 
 const statusVariant = (s: string) => {
   if (s === "completed" || s === "active" || s === "done") return "success" as const;
@@ -19,9 +20,9 @@ const statusVariant = (s: string) => {
 };
 
 const actionColors: Record<string, string> = {
-  created: "bg-success/10 text-success",
-  updated: "bg-primary/10 text-primary",
-  deleted: "bg-destructive/10 text-destructive",
+  created: "bg-emerald-50 text-emerald-600",
+  updated: "bg-violet-50 text-violet-600",
+  deleted: "bg-rose-50 text-rose-600",
 };
 
 export default function Dashboard() {
@@ -81,6 +82,16 @@ export default function Dashboard() {
     return "Good evening";
   };
 
+  const containerVariants = {
+    hidden: {},
+    show: { transition: { staggerChildren: 0.06 } },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 12 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } },
+  };
+
   return (
     <div>
       <PageHeader
@@ -88,7 +99,12 @@ export default function Dashboard() {
         subtitle="Here's what's happening across your projects"
       />
       <div className="p-6 space-y-6">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4"
+        >
           {[
             { title: "Projects", value: String(projects?.length || 0), icon: FolderKanban, status: "info" as const },
             { title: "Active", value: String(activeProjects), icon: TrendingUp, status: "success" as const, change: `${avgProgress}% avg`, changeType: "positive" as const },
@@ -96,114 +112,133 @@ export default function Dashboard() {
             { title: "Suppliers", value: String(suppliers?.length || 0), icon: Truck, status: "warning" as const },
             { title: "Tasks", value: `${completedTasks}/${totalTasks}`, icon: ListChecks, status: "info" as const },
             { title: "Budget", value: `$${totalBudget.toLocaleString()}`, icon: DollarSign, status: "warning" as const },
-          ].map((kpi, i) => (
-            <div key={kpi.title} className="animate-fade-in" style={{ animationDelay: `${i * 60}ms` }}>
+          ].map((kpi) => (
+            <motion.div key={kpi.title} variants={itemVariants}>
               <KPICard {...kpi} />
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-2 animate-fade-in rounded-2xl border-border/60 shadow-sm" style={{ animationDelay: "100ms" }}>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <TrendingUp className="h-4 w-4 text-primary" />
-                  </div>
-                  Recent Projects
-                </CardTitle>
-                <Link to="/projects" className="text-xs text-primary hover:underline flex items-center gap-1 font-medium">View all <ArrowUpRight className="h-3 w-3" /></Link>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-1">
-              {projects?.slice(0, 5).map((p) => (
-                <Link key={p.id} to={`/projects/${p.id}`}
-                  className="flex items-center justify-between p-3.5 rounded-xl hover:bg-accent/50 transition-all duration-200 group">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-sm truncate group-hover:text-primary transition-colors">{p.name}</p>
-                      <span className="text-[10px] font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md">{p.reference_number}</span>
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="lg:col-span-2"
+          >
+            <Card className="rounded-2xl border-border/40 shadow-sm hover:shadow-md transition-shadow duration-300">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2.5">
+                    <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <TrendingUp className="h-4 w-4 text-primary" />
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">{(p as any).clients?.name || "No client"}</p>
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <div className="hidden sm:flex items-center gap-2 w-28">
-                      <Progress value={p.progress} className="h-1.5 flex-1" />
-                      <span className="text-[10px] text-muted-foreground w-8 text-right font-medium">{p.progress}%</span>
+                    Recent Projects
+                  </CardTitle>
+                  <Link to="/projects" className="text-xs text-primary hover:underline flex items-center gap-1 font-medium">View all <ArrowUpRight className="h-3 w-3" /></Link>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-0.5">
+                {projects?.slice(0, 5).map((p) => (
+                  <Link key={p.id} to={`/projects/${p.id}`}
+                    className="flex items-center justify-between p-3.5 rounded-xl hover:bg-accent/50 transition-all duration-200 group">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-sm truncate group-hover:text-primary transition-colors">{p.name}</p>
+                        <span className="text-[10px] font-mono text-muted-foreground/60 bg-muted/50 px-1.5 py-0.5 rounded-md">{p.reference_number}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">{(p as any).clients?.name || "No client"}</p>
                     </div>
-                    <StatusBadge status={p.status} variant={statusVariant(p.status)} />
-                  </div>
-                </Link>
-              ))}
-              {(!projects || projects.length === 0) && (
-                <p className="text-sm text-muted-foreground text-center py-8">No projects yet.</p>
-              )}
-            </CardContent>
-          </Card>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="hidden sm:flex items-center gap-2 w-28">
+                        <Progress value={p.progress} className="h-1.5 flex-1" />
+                        <span className="text-[10px] text-muted-foreground w-8 text-right font-semibold tabular-nums">{p.progress}%</span>
+                      </div>
+                      <StatusBadge status={p.status} variant={statusVariant(p.status)} />
+                    </div>
+                  </Link>
+                ))}
+                {(!projects || projects.length === 0) && (
+                  <p className="text-sm text-muted-foreground text-center py-8">No projects yet.</p>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
 
-          <Card className="animate-fade-in rounded-2xl border-border/60 shadow-sm" style={{ animationDelay: "200ms" }}>
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <Card className="rounded-2xl border-border/40 shadow-sm hover:shadow-md transition-shadow duration-300">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2.5">
+                    <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <Activity className="h-4 w-4 text-primary" />
+                    </div>
+                    Activity
+                  </CardTitle>
+                  <Link to="/activity" className="text-xs text-primary hover:underline flex items-center gap-1 font-medium">View all <ArrowUpRight className="h-3 w-3" /></Link>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {recentActivity?.map(log => (
+                    <div key={log.id} className="flex items-start gap-3 group">
+                      <div className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 text-[10px] font-bold ${actionColors[log.action] || "bg-muted text-muted-foreground"}`}>
+                        {log.action[0].toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs leading-relaxed truncate">{log.description}</p>
+                        <p className="text-[10px] text-muted-foreground/60">{formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}</p>
+                      </div>
+                    </div>
+                  ))}
+                  {(!recentActivity || recentActivity.length === 0) && (
+                    <p className="text-xs text-muted-foreground text-center py-4">No recent activity.</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <Card className="rounded-2xl border-border/40 shadow-sm">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <Activity className="h-4 w-4 text-primary" />
+                <CardTitle className="text-sm font-semibold flex items-center gap-2.5">
+                  <div className="h-8 w-8 rounded-xl bg-warning/10 flex items-center justify-center">
+                    <Clock className="h-4 w-4 text-warning" />
                   </div>
-                  Activity
+                  Pending Tasks
                 </CardTitle>
-                <Link to="/activity" className="text-xs text-primary hover:underline flex items-center gap-1 font-medium">View all <ArrowUpRight className="h-3 w-3" /></Link>
+                <Link to="/tasks" className="text-xs text-primary hover:underline flex items-center gap-1 font-medium">View all <ArrowUpRight className="h-3 w-3" /></Link>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {recentActivity?.map(log => (
-                  <div key={log.id} className="flex items-start gap-3 group">
-                    <div className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 text-[10px] font-bold ${actionColors[log.action] || "bg-muted text-muted-foreground"}`}>
-                      {log.action[0].toUpperCase()}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {tasks?.filter(t => t.status !== "done").slice(0, 6).map(t => (
+                  <div key={t.id} className="flex items-center justify-between p-3.5 rounded-xl border border-border/40 hover:shadow-sm hover:border-primary/20 transition-all duration-200">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm truncate">{t.title}</p>
+                      <p className="text-xs text-muted-foreground/70">{t.due_date ? `Due: ${t.due_date}` : "No due date"}</p>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs leading-relaxed truncate">{log.description}</p>
-                      <p className="text-[10px] text-muted-foreground">{formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}</p>
-                    </div>
+                    <StatusBadge status={t.status} variant={statusVariant(t.status)} />
                   </div>
                 ))}
-                {(!recentActivity || recentActivity.length === 0) && (
-                  <p className="text-xs text-muted-foreground text-center py-4">No recent activity.</p>
-                )}
               </div>
+              {(!tasks || tasks.filter(t => t.status !== "done").length === 0) && (
+                <p className="text-sm text-muted-foreground text-center py-6">All tasks complete! 🎉</p>
+              )}
             </CardContent>
           </Card>
-        </div>
-
-        <Card className="animate-fade-in rounded-2xl border-border/60 shadow-sm" style={{ animationDelay: "300ms" }}>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <div className="h-8 w-8 rounded-xl bg-warning/10 flex items-center justify-center">
-                  <Clock className="h-4 w-4 text-warning" />
-                </div>
-                Pending Tasks
-              </CardTitle>
-              <Link to="/tasks" className="text-xs text-primary hover:underline flex items-center gap-1 font-medium">View all <ArrowUpRight className="h-3 w-3" /></Link>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {tasks?.filter(t => t.status !== "done").slice(0, 6).map(t => (
-                <div key={t.id} className="flex items-center justify-between p-3.5 rounded-xl border border-border/60 hover:shadow-sm transition-all duration-200">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-sm truncate">{t.title}</p>
-                    <p className="text-xs text-muted-foreground">{t.due_date ? `Due: ${t.due_date}` : "No due date"}</p>
-                  </div>
-                  <StatusBadge status={t.status} variant={statusVariant(t.status)} />
-                </div>
-              ))}
-            </div>
-            {(!tasks || tasks.filter(t => t.status !== "done").length === 0) && (
-              <p className="text-sm text-muted-foreground text-center py-6">All tasks complete! 🎉</p>
-            )}
-          </CardContent>
-        </Card>
+        </motion.div>
       </div>
     </div>
   );
