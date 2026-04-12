@@ -19,6 +19,7 @@ import Reports from "./pages/Reports";
 import DataExport from "./pages/DataExport";
 import Employees from "./pages/Employees";
 import EmployeeDetail from "./pages/EmployeeDetail";
+import AIPage from "./pages/AIPage";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
@@ -72,6 +73,7 @@ const App = () => (
               <Route path="/export" element={<DataExport />} />
               <Route path="/employees" element={<Employees />} />
               <Route path="/employees/:id" element={<EmployeeDetail />} />
+              <Route path="/ai" element={<AIPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
