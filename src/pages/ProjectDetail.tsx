@@ -513,9 +513,7 @@ export default function ProjectDetail() {
 
           <TabsContent value="references">
             <div className="flex justify-end mb-4">
-              <Link to={`/references?project=${id}`}>
-                <Button size="sm"><Plus className="h-4 w-4 mr-1" /> Generate Reference</Button>
-              </Link>
+              <Button size="sm" onClick={() => setRefDialog(true)}><Plus className="h-4 w-4 mr-1" /> Generate Reference</Button>
             </div>
             <Card><CardContent className="p-0">
               <Table>
