@@ -124,7 +124,7 @@ export default function Dashboard() {
         >
           {[
             { title: "Projects", value: String(projects?.length || 0), icon: FolderKanban, status: "info" as const },
-            { title: "Active", value: String(activeProjects), icon: TrendingUp, status: "success" as const, change: `${avgProgress}% avg`, changeType: "positive" as const },
+            
             { title: "Clients", value: String(clients?.filter(c => c.status === "active").length || 0), icon: Users, status: "success" as const },
             { title: "Suppliers", value: String(suppliers?.length || 0), icon: Truck, status: "warning" as const },
             { title: "Tasks", value: `${completedTasks}/${totalTasks}`, icon: ListChecks, status: "info" as const },
