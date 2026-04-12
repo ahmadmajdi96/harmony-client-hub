@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, X, Send, Bot, User, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import ReactMarkdown from "react-markdown";
+import { MarkdownRenderer } from "@/components/shared/MarkdownRenderer";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -224,9 +224,7 @@ export function ChatAgent() {
                     }`}
                   >
                     {msg.role === "assistant" ? (
-                      <div className="prose prose-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_table]:text-xs">
-                        <ReactMarkdown>{msg.content}</ReactMarkdown>
-                      </div>
+                      <MarkdownRenderer content={msg.content} />
                     ) : (
                       <p className="whitespace-pre-wrap">{msg.content}</p>
                     )}
