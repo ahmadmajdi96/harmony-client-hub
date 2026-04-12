@@ -138,7 +138,7 @@ export default function Tasks() {
       <div className="p-6 space-y-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in">
           <KPICard title="Total" value={String(tasks?.length || 0)} icon={ListChecks} status="info" />
-          <KPICard title="To Do" value={String(tasks?.filter(t => t.status === "todo").length || 0)} status="default" />
+          <KPICard title="To Do" value={String(tasks?.filter(t => t.status === "todo").length || 0)} status="info" />
           <KPICard title="In Progress" value={String(tasks?.filter(t => t.status === "in_progress").length || 0)} status="warning" />
           <KPICard title="Done" value={String(tasks?.filter(t => t.status === "done").length || 0)} status="success" />
         </div>
