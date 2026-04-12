@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { KPICard } from "@/components/shared/KPICard";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, ListChecks, Pencil, Trash2, LayoutGrid, List, GripVertical, Search, Eye, Clock, Calendar, User, Users2 } from "lucide-react";
+import { Plus, ListChecks, Pencil, Trash2, LayoutGrid, List, GripVertical, Search, Eye, Clock, Calendar, User, Users2, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 
