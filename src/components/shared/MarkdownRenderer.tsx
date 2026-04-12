@@ -1,4 +1,5 @@
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 
 interface MarkdownRendererProps {
@@ -10,6 +11,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
   return (
     <div className={cn("text-sm", className)}>
       <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
         components={{
           h1: ({ children }) => (
             <h1 className="text-base font-bold text-foreground mt-4 mb-2 first:mt-0">{children}</h1>
@@ -82,7 +84,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
             <tr className="hover:bg-accent/30 transition-colors">{children}</tr>
           ),
           th: ({ children }) => (
-            <th className="px-3 py-2 text-left font-semibold text-foreground text-xs whitespace-nowrap border-b border-border/50">
+            <th className="px-3 py-2 text-left font-semibold text-foreground text-xs border-b border-border/50">
               {children}
             </th>
           ),
