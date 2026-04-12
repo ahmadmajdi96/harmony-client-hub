@@ -1,16 +1,17 @@
 import { useState, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { KPICard } from "@/components/shared/KPICard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Trash2, Download, FileText, FolderKanban, Mail, Phone, MapPin, Building } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Upload, Trash2, Download, FileText, FolderKanban, Mail, Phone, MapPin, Building, Hash, DollarSign, Calendar } from "lucide-react";
 
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
@@ -107,46 +108,76 @@ export default function ClientDetail() {
 
   if (!client) return <div className="p-6 text-muted-foreground">Loading...</div>;
 
+  const totalBudget = projects?.reduce((sum, p) => sum + (Number(p.budget) || 0), 0) || 0;
+  const activeProjects = projects?.filter(p => p.status === "in_progress").length || 0;
+  const avgProgress = projects?.length ? Math.round(projects.reduce((sum, p) => sum + p.progress, 0) / projects.length) : 0;
+
   return (
     <div>
-      <PageHeader title={client.name} subtitle={client.company || "Individual client"} />
+      <PageHeader title={client.name} subtitle={`${client.reference_number || ""} · ${client.company || "Individual client"}`} />
       <div className="p-6 space-y-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {client.email && (
-            <Card><CardContent className="p-4 flex items-center gap-3"><Mail className="h-4 w-4 text-primary shrink-0" /><div><p className="text-xs text-muted-foreground">Email</p><p className="text-sm font-medium">{client.email}</p></div></CardContent></Card>
-          )}
-          {client.phone && (
-            <Card><CardContent className="p-4 flex items-center gap-3"><Phone className="h-4 w-4 text-primary shrink-0" /><div><p className="text-xs text-muted-foreground">Phone</p><p className="text-sm font-medium">{client.phone}</p></div></CardContent></Card>
-          )}
-          {client.address && (
-            <Card><CardContent className="p-4 flex items-center gap-3"><MapPin className="h-4 w-4 text-primary shrink-0" /><div><p className="text-xs text-muted-foreground">Address</p><p className="text-sm font-medium">{client.address}</p></div></CardContent></Card>
-          )}
-          <Card><CardContent className="p-4 flex items-center gap-3"><Building className="h-4 w-4 text-primary shrink-0" /><div><p className="text-xs text-muted-foreground">Status</p><StatusBadge status={client.status} variant={client.status === "active" ? "success" : "default"} /></div></CardContent></Card>
+        {/* Overview Info Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          <Card><CardContent className="p-4"><div className="flex items-center gap-2 mb-1"><Hash className="h-3 w-3 text-muted-foreground" /><p className="text-xs text-muted-foreground">Reference</p></div><p className="font-semibold text-sm font-mono">{client.reference_number || "—"}</p></CardContent></Card>
+          <Card><CardContent className="p-4"><div className="flex items-center gap-2 mb-1"><Building className="h-3 w-3 text-muted-foreground" /><p className="text-xs text-muted-foreground">Status</p></div><StatusBadge status={client.status} variant={client.status === "active" ? "success" : "default"} /></CardContent></Card>
+          <Card><CardContent className="p-4"><div className="flex items-center gap-2 mb-1"><FolderKanban className="h-3 w-3 text-muted-foreground" /><p className="text-xs text-muted-foreground">Projects</p></div><p className="font-semibold text-sm">{projects?.length || 0} ({activeProjects} active)</p></CardContent></Card>
+          <Card><CardContent className="p-4"><div className="flex items-center gap-2 mb-1"><DollarSign className="h-3 w-3 text-muted-foreground" /><p className="text-xs text-muted-foreground">Total Budget</p></div><p className="font-semibold text-sm">${totalBudget.toLocaleString()}</p></CardContent></Card>
+          <Card><CardContent className="p-4"><div className="flex items-center gap-2 mb-1"><FileText className="h-3 w-3 text-muted-foreground" /><p className="text-xs text-muted-foreground">Files</p></div><p className="font-semibold text-sm">{files?.length || 0}</p></CardContent></Card>
         </div>
 
+        {/* Contact Details */}
+        <Card>
+          <CardHeader className="pb-3"><CardTitle className="text-base">Contact Information</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="flex items-center gap-3 p-3 rounded-md border">
+                <Mail className="h-4 w-4 text-primary shrink-0" />
+                <div><p className="text-xs text-muted-foreground">Email</p><p className="text-sm font-medium">{client.email || "—"}</p></div>
+              </div>
+              <div className="flex items-center gap-3 p-3 rounded-md border">
+                <Phone className="h-4 w-4 text-primary shrink-0" />
+                <div><p className="text-xs text-muted-foreground">Phone</p><p className="text-sm font-medium">{client.phone || "—"}</p></div>
+              </div>
+              <div className="flex items-center gap-3 p-3 rounded-md border">
+                <Building className="h-4 w-4 text-primary shrink-0" />
+                <div><p className="text-xs text-muted-foreground">Company</p><p className="text-sm font-medium">{client.company || "—"}</p></div>
+              </div>
+              <div className="flex items-center gap-3 p-3 rounded-md border">
+                <MapPin className="h-4 w-4 text-primary shrink-0" />
+                <div><p className="text-xs text-muted-foreground">Address</p><p className="text-sm font-medium">{client.address || "—"}</p></div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {client.notes && (
-          <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">{client.notes}</p></CardContent></Card>
+          <Card><CardHeader className="pb-2"><CardTitle className="text-base">Notes</CardTitle></CardHeader><CardContent><p className="text-sm text-muted-foreground">{client.notes}</p></CardContent></Card>
         )}
 
         <Tabs defaultValue="projects">
           <TabsList><TabsTrigger value="projects"><FolderKanban className="h-4 w-4 mr-1" /> Projects ({projects?.length || 0})</TabsTrigger><TabsTrigger value="files"><FileText className="h-4 w-4 mr-1" /> Files ({files?.length || 0})</TabsTrigger></TabsList>
 
           <TabsContent value="projects">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {projects?.map(p => (
-                <Card key={p.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-semibold text-sm">{p.name}</h3>
-                      <StatusBadge status={p.status} variant={statusVariant(p.status)} />
-                    </div>
-                    {p.description && <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{p.description}</p>}
-                    <Button size="sm" variant="outline" className="text-xs h-7" asChild><Link to={`/projects/${p.id}`}>View Project</Link></Button>
-                  </CardContent>
-                </Card>
-              ))}
-              {(!projects || projects.length === 0) && <p className="text-muted-foreground text-sm col-span-full text-center py-6">No projects for this client.</p>}
-            </div>
+            <Card><CardContent className="p-0">
+              <Table>
+                <TableHeader><TableRow><TableHead>Ref</TableHead><TableHead>Name</TableHead><TableHead>Status</TableHead><TableHead>Priority</TableHead><TableHead>Budget</TableHead><TableHead>Progress</TableHead><TableHead>Timeline</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {projects?.map(p => (
+                    <TableRow key={p.id}>
+                      <TableCell className="font-mono text-xs text-muted-foreground">{p.reference_number}</TableCell>
+                      <TableCell className="font-medium">{p.name}</TableCell>
+                      <TableCell><StatusBadge status={p.status} variant={statusVariant(p.status)} /></TableCell>
+                      <TableCell><StatusBadge status={p.priority} variant={p.priority === "high" ? "danger" : p.priority === "medium" ? "warning" : "default"} /></TableCell>
+                      <TableCell className="text-sm">{p.budget ? `$${Number(p.budget).toLocaleString()}` : "—"}</TableCell>
+                      <TableCell><div className="flex items-center gap-2"><Progress value={p.progress} className="w-16 h-2" /><span className="text-xs">{p.progress}%</span></div></TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{p.start_date || "—"} → {p.end_date || "—"}</TableCell>
+                      <TableCell><Button size="sm" variant="outline" className="h-7 text-xs" asChild><Link to={`/projects/${p.id}`}>View</Link></Button></TableCell>
+                    </TableRow>
+                  ))}
+                  {(!projects || projects.length === 0) && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-6">No projects for this client.</TableCell></TableRow>}
+                </TableBody>
+              </Table>
+            </CardContent></Card>
           </TabsContent>
 
           <TabsContent value="files">
@@ -156,30 +187,23 @@ export default function ClientDetail() {
                 <Upload className="h-4 w-4 mr-1" /> {uploading ? "Uploading..." : "Upload Files"}
               </Button>
             </div>
-            <Card>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Type</TableHead><TableHead>Size</TableHead><TableHead>Uploaded</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
-                  <TableBody>
-                    {files?.map(f => (
-                      <TableRow key={f.id}>
-                        <TableCell className="font-medium">{f.file_name}</TableCell>
-                        <TableCell className="text-muted-foreground text-sm">{f.file_type || "—"}</TableCell>
-                        <TableCell className="text-sm">{formatSize(f.file_size)}</TableCell>
-                        <TableCell className="text-sm">{new Date(f.created_at).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => downloadFile(f.file_path, f.file_name)}><Download className="h-3 w-3" /></Button>
-                            <Button size="sm" variant="outline" className="h-7 text-xs text-destructive" onClick={() => deleteFileMutation.mutate({ id: f.id, file_path: f.file_path })}><Trash2 className="h-3 w-3" /></Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {(!files || files.length === 0) && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-6">No files uploaded yet.</TableCell></TableRow>}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+            <Card><CardContent className="p-0">
+              <Table>
+                <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Type</TableHead><TableHead>Size</TableHead><TableHead>Uploaded</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {files?.map(f => (
+                    <TableRow key={f.id}>
+                      <TableCell className="font-medium">{f.file_name}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">{f.file_type || "—"}</TableCell>
+                      <TableCell className="text-sm">{formatSize(f.file_size)}</TableCell>
+                      <TableCell className="text-sm">{new Date(f.created_at).toLocaleDateString()}</TableCell>
+                      <TableCell><div className="flex gap-1"><Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => downloadFile(f.file_path, f.file_name)}><Download className="h-3 w-3" /></Button><Button size="sm" variant="outline" className="h-7 text-xs text-destructive" onClick={() => deleteFileMutation.mutate({ id: f.id, file_path: f.file_path })}><Trash2 className="h-3 w-3" /></Button></div></TableCell>
+                    </TableRow>
+                  ))}
+                  {(!files || files.length === 0) && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-6">No files uploaded yet.</TableCell></TableRow>}
+                </TableBody>
+              </Table>
+            </CardContent></Card>
           </TabsContent>
         </Tabs>
       </div>

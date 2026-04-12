@@ -5,8 +5,10 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { KPICard } from "@/components/shared/KPICard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, Download, Trash2, FileText, HardDrive, Image, FileArchive } from "lucide-react";
 
@@ -16,11 +18,23 @@ export default function FileManager() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [filter, setFilter] = useState("all");
+  const [uploadDialog, setUploadDialog] = useState(false);
+  const [uploadClientId, setUploadClientId] = useState("");
+  const [uploadProjectId, setUploadProjectId] = useState("");
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
 
   const { data: files } = useQuery({
     queryKey: ["files-all"],
     queryFn: async () => {
-      const { data } = await supabase.from("project_files").select("*, projects(name), clients(name)").order("created_at", { ascending: false });
+      const { data } = await supabase.from("project_files").select("*, projects(name, reference_number), clients(name, reference_number)").order("created_at", { ascending: false });
+      return data || [];
+    },
+  });
+
+  const { data: clients } = useQuery({
+    queryKey: ["clients-list"],
+    queryFn: async () => {
+      const { data } = await supabase.from("clients").select("id, name, reference_number");
       return data || [];
     },
   });
@@ -28,32 +42,49 @@ export default function FileManager() {
   const { data: projects } = useQuery({
     queryKey: ["projects-list"],
     queryFn: async () => {
-      const { data } = await supabase.from("projects").select("id, name");
+      const { data } = await supabase.from("projects").select("id, name, reference_number");
       return data || [];
     },
   });
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const uploadFiles = e.target.files;
-    if (!uploadFiles?.length) return;
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files;
+    if (!selected?.length) return;
+    setPendingFiles(Array.from(selected));
+    setUploadClientId("");
+    setUploadProjectId("");
+    setUploadDialog(true);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleUploadConfirm = async () => {
+    if (!pendingFiles.length) return;
     setUploading(true);
     try {
-      for (const file of Array.from(uploadFiles)) {
-        const filePath = `general/${Date.now()}_${file.name}`;
+      for (const file of pendingFiles) {
+        const folder = uploadProjectId ? `projects/${uploadProjectId}` : uploadClientId ? `clients/${uploadClientId}` : "general";
+        const filePath = `${folder}/${Date.now()}_${file.name}`;
         const { error: uploadError } = await supabase.storage.from("project-files").upload(filePath, file);
         if (uploadError) throw uploadError;
         const { error: dbError } = await supabase.from("project_files").insert({
-          file_name: file.name, file_path: filePath, file_size: file.size, file_type: file.type, uploaded_by: "System",
+          file_name: file.name,
+          file_path: filePath,
+          file_size: file.size,
+          file_type: file.type,
+          uploaded_by: "System",
+          client_id: uploadClientId || null,
+          project_id: uploadProjectId || null,
         });
         if (dbError) throw dbError;
       }
       queryClient.invalidateQueries({ queryKey: ["files-all"] });
-      toast({ title: `${uploadFiles.length} file(s) uploaded` });
+      toast({ title: `${pendingFiles.length} file(s) uploaded` });
+      setUploadDialog(false);
+      setPendingFiles([]);
     } catch (err: any) {
       toast({ title: "Upload failed", description: err.message, variant: "destructive" });
     } finally {
       setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -116,9 +147,9 @@ export default function FileManager() {
             </SelectContent>
           </Select>
           <div>
-            <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleUpload} />
-            <Button onClick={() => fileInputRef.current?.click()} disabled={uploading}>
-              <Upload className="h-4 w-4 mr-2" /> {uploading ? "Uploading..." : "Upload Files"}
+            <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
+            <Button onClick={() => fileInputRef.current?.click()}>
+              <Upload className="h-4 w-4 mr-2" /> Upload Files
             </Button>
           </div>
         </div>
@@ -131,8 +162,8 @@ export default function FileManager() {
                 {filteredFiles?.map(f => (
                   <TableRow key={f.id}>
                     <TableCell className="font-medium">{f.file_name}</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{(f as any).projects?.name || "—"}</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{(f as any).clients?.name || "—"}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">{(f as any).projects?.name ? `${(f as any).projects.name} (${(f as any).projects.reference_number})` : "—"}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">{(f as any).clients?.name ? `${(f as any).clients.name} (${(f as any).clients.reference_number})` : "—"}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">{f.file_type || "—"}</TableCell>
                     <TableCell className="text-sm">{formatSize(f.file_size)}</TableCell>
                     <TableCell className="text-sm">{new Date(f.created_at).toLocaleDateString()}</TableCell>
@@ -150,6 +181,46 @@ export default function FileManager() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={uploadDialog} onOpenChange={setUploadDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Upload {pendingFiles.length} File(s)</DialogTitle><DialogDescription>Optionally assign the files to a client and/or project.</DialogDescription></DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-md border p-3 bg-muted/50">
+              <p className="text-sm font-medium mb-1">Selected files:</p>
+              {pendingFiles.map((f, i) => (
+                <p key={i} className="text-xs text-muted-foreground">{f.name} ({formatSize(f.size)})</p>
+              ))}
+            </div>
+            <div>
+              <Label>Assign to Client (optional)</Label>
+              <Select value={uploadClientId} onValueChange={setUploadClientId}>
+                <SelectTrigger><SelectValue placeholder="No client" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No client</SelectItem>
+                  {clients?.map(c => <SelectItem key={c.id} value={c.id}>{c.name} ({c.reference_number})</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Assign to Project (optional)</Label>
+              <Select value={uploadProjectId} onValueChange={setUploadProjectId}>
+                <SelectTrigger><SelectValue placeholder="No project" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No project</SelectItem>
+                  {projects?.map(p => <SelectItem key={p.id} value={p.id}>{p.name} ({p.reference_number})</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUploadDialog(false)}>Cancel</Button>
+            <Button onClick={handleUploadConfirm} disabled={uploading}>
+              <Upload className="h-4 w-4 mr-2" /> {uploading ? "Uploading..." : "Upload"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
