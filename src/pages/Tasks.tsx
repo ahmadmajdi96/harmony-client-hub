@@ -39,6 +39,8 @@ export default function Tasks() {
   const [search, setSearch] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [projectFilter, setProjectFilter] = useState("all");
+  const [employeeFilter, setEmployeeFilter] = useState("all");
+  const [clientFilter, setClientFilter] = useState("all");
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [form, setForm] = useState({ title: "", description: "", status: "todo", priority: "medium", assigned_to: "", due_date: "", project_id: "" });
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
@@ -57,7 +59,7 @@ export default function Tasks() {
   const { data: projects } = useQuery({
     queryKey: ["projects-list"],
     queryFn: async () => {
-      const { data } = await supabase.from("projects").select("id, name");
+      const { data } = await supabase.from("projects").select("id, name, client_id");
       return data || [];
     },
   });
@@ -74,6 +76,14 @@ export default function Tasks() {
     queryKey: ["task_employees"],
     queryFn: async () => {
       const { data } = await supabase.from("task_employees").select("*");
+      return data || [];
+    },
+  });
+
+  const { data: clients } = useQuery({
+    queryKey: ["clients-list"],
+    queryFn: async () => {
+      const { data } = await supabase.from("clients").select("id, name");
       return data || [];
     },
   });
@@ -152,7 +162,12 @@ export default function Tasks() {
     const matchesSearch = !search || t.title.toLowerCase().includes(search.toLowerCase()) || t.assigned_to?.toLowerCase().includes(search.toLowerCase()) || (t as any).projects?.name?.toLowerCase().includes(search.toLowerCase());
     const matchesPriority = priorityFilter === "all" || t.priority === priorityFilter;
     const matchesProject = projectFilter === "all" || t.project_id === projectFilter;
-    return matchesSearch && matchesPriority && matchesProject;
+    const matchesEmployee = employeeFilter === "all" || taskEmployees?.some((te: any) => te.task_id === t.id && te.employee_id === employeeFilter);
+    const matchesClient = clientFilter === "all" || (() => {
+      const proj = projects?.find(p => p.id === t.project_id);
+      return proj?.client_id === clientFilter;
+    })();
+    return matchesSearch && matchesPriority && matchesProject && matchesEmployee && matchesClient;
   }) || [];
 
   const todoTasks = filteredTasks.filter(t => t.status === "todo");
@@ -207,6 +222,20 @@ export default function Tasks() {
               <SelectContent>
                 <SelectItem value="all">All Projects</SelectItem>
                 {projects?.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
+              <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Employees</SelectItem>
+                {employees?.map((e: any) => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={clientFilter} onValueChange={setClientFilter}>
+              <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Clients</SelectItem>
+                {clients?.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>

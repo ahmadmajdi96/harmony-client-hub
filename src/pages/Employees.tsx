@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,6 +25,7 @@ import {
   Clock, BarChart3, TrendingUp, PieChart, CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import html2canvas from "html2canvas";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { saveAs } from "file-saver";
@@ -90,6 +91,9 @@ export default function Employees() {
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
   const [taskStatusFilter, setTaskStatusFilter] = useState("all");
+
+  // Analytics ref
+  const analyticsRef = useRef<HTMLDivElement>(null);
 
   // Project assignment
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
@@ -408,6 +412,45 @@ export default function Employees() {
       setSelectedEmployeeIds([]);
     } else {
       setSelectedEmployeeIds(filtered.map(e => e.id));
+    }
+  };
+
+  const handleExportAnalyticsImage = async () => {
+    if (!analyticsRef.current) return;
+    try {
+      toast.info("Generating image...");
+      const canvas = await html2canvas(analyticsRef.current, { backgroundColor: null, scale: 2, useCORS: true });
+      canvas.toBlob((blob) => {
+        if (blob) {
+          saveAs(blob, `employee_analytics_${format(new Date(), "yyyy-MM-dd")}.png`);
+          toast.success("Analytics exported as image");
+        }
+      }, "image/png");
+    } catch {
+      toast.error("Failed to export image");
+    }
+  };
+
+  const handleExportAnalyticsPDF = async () => {
+    if (!analyticsRef.current) return;
+    try {
+      toast.info("Generating PDF...");
+      const canvas = await html2canvas(analyticsRef.current, { backgroundColor: "#ffffff", scale: 2, useCORS: true });
+      const imgData = canvas.toDataURL("image/png");
+      // Create a simple printable page
+      const printWindow = window.open("", "_blank");
+      if (printWindow) {
+        printWindow.document.write(`
+          <html><head><title>Employee Analytics Report</title>
+          <style>body{margin:0;display:flex;justify-content:center;} img{max-width:100%;height:auto;}</style></head>
+          <body><img src="${imgData}" /></body></html>
+        `);
+        printWindow.document.close();
+        setTimeout(() => { printWindow.print(); }, 500);
+        toast.success("Analytics PDF ready for print");
+      }
+    } catch {
+      toast.error("Failed to export PDF");
     }
   };
 
@@ -880,7 +923,16 @@ export default function Employees() {
 
           {/* ═══════ ANALYTICS TAB ═══════ */}
           <TabsContent value="analytics" className="space-y-4 mt-4">
-            {/* Summary KPIs */}
+            {/* Export buttons */}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" className="gap-2" onClick={handleExportAnalyticsImage}>
+                <Download className="w-4 h-4" /> Export as Image
+              </Button>
+              <Button variant="outline" size="sm" className="gap-2" onClick={handleExportAnalyticsPDF}>
+                <Download className="w-4 h-4" /> Export as PDF
+              </Button>
+            </div>
+            <div ref={analyticsRef}>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <Card className="p-4">
                 <div className="flex items-center gap-3">
@@ -1034,6 +1086,7 @@ export default function Employees() {
                 Assign tasks to employees to see performance analytics
               </Card>
             )}
+            </div>
           </TabsContent>
         </Tabs>
       </div>
