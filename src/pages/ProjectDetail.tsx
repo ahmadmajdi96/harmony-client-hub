@@ -409,7 +409,24 @@ export default function ProjectDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Client Dialog */}
+      {/* Supplier Dialog */}
+      <Dialog open={supplierDialog} onOpenChange={setSupplierDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Add Supplier to Project</DialogTitle><DialogDescription>Select a supplier to assign.</DialogDescription></DialogHeader>
+          <div className="space-y-4">
+            <div><Label>Supplier</Label>
+              <Select value={supplierForm.supplier_id} onValueChange={v => setSupplierForm(f => ({ ...f, supplier_id: v }))}>
+                <SelectTrigger><SelectValue placeholder="Select supplier" /></SelectTrigger>
+                <SelectContent>{allSuppliers?.filter(s => !projectSuppliers?.some(ps => ps.supplier_id === s.id)).map(s => <SelectItem key={s.id} value={s.id}>{s.name} ({s.reference_number})</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div><Label>Role (optional)</Label><Input value={supplierForm.role} onChange={e => setSupplierForm(f => ({ ...f, role: e.target.value }))} placeholder="e.g. Material Supplier" /></div>
+            <div><Label>Notes (optional)</Label><Textarea value={supplierForm.notes} onChange={e => setSupplierForm(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setSupplierDialog(false)}>Cancel</Button><Button onClick={() => addSupplierMutation.mutate()} disabled={!supplierForm.supplier_id}>Add Supplier</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={clientDialog} onOpenChange={setClientDialog}>
         <DialogContent>
           <DialogHeader><DialogTitle>Add Client to Project</DialogTitle><DialogDescription>Select a client to assign.</DialogDescription></DialogHeader>
