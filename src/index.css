@@ -5,42 +5,42 @@
 @layer base {
   :root {
     --background: 30 25% 98%;
-    --foreground: 240 6% 20%;
+    --foreground: 240 6% 16%;
 
-    --card: 30 20% 99%;
-    --card-foreground: 240 6% 20%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 6% 16%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 240 6% 20%;
+    --popover-foreground: 240 6% 16%;
 
     --primary: 252 56% 57%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 30 18% 94%;
-    --secondary-foreground: 240 6% 20%;
+    --secondary: 30 16% 94%;
+    --secondary-foreground: 240 6% 16%;
 
-    --muted: 30 12% 93%;
-    --muted-foreground: 240 4% 50%;
+    --muted: 30 10% 93%;
+    --muted-foreground: 240 4% 48%;
 
-    --accent: 30 18% 94%;
-    --accent-foreground: 240 6% 20%;
+    --accent: 252 30% 96%;
+    --accent-foreground: 240 6% 16%;
 
-    --destructive: 0 72% 60%;
+    --destructive: 0 72% 58%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 30 12% 90%;
-    --input: 30 12% 90%;
+    --border: 30 10% 90%;
+    --input: 30 10% 90%;
     --ring: 252 56% 57%;
 
     --radius: 1rem;
 
-    --sidebar-background: 30 20% 97%;
+    --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 240 4% 48%;
     --sidebar-primary: 252 56% 57%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 252 40% 96%;
-    --sidebar-accent-foreground: 240 6% 20%;
-    --sidebar-border: 30 12% 92%;
+    --sidebar-accent: 252 36% 96%;
+    --sidebar-accent-foreground: 240 6% 16%;
+    --sidebar-border: 30 10% 92%;
     --sidebar-ring: 252 56% 57%;
 
     --success: 152 60% 42%;
@@ -94,17 +94,19 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 
   html {
     scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   ::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
+    width: 6px;
+    height: 6px;
   }
   ::-webkit-scrollbar-track {
     background: transparent;
@@ -114,42 +116,42 @@
     border-radius: 100px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground) / 0.3);
+    background: hsl(var(--muted-foreground) / 0.25);
   }
 }
 
 @layer utilities {
   .animate-fade-in {
-    animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     opacity: 0;
   }
 
   .animate-slide-up {
-    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     opacity: 0;
   }
 
   .animate-scale-in {
-    animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     opacity: 0;
   }
 
   .hover-lift {
-    @apply transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md;
+    @apply transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg;
   }
 
   .glass {
-    @apply bg-background/80 backdrop-blur-xl;
+    @apply bg-background/70 backdrop-blur-2xl;
   }
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(14px); }
+  from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
