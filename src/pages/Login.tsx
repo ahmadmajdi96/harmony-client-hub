@@ -32,8 +32,8 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 via-violet-50 to-rose-50 p-4">
       <Card className="w-full max-w-md border-border/50 shadow-xl shadow-primary/5 bg-card/90 backdrop-blur-sm">
         <CardHeader className="text-center space-y-4 pb-2">
-          <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-md shadow-primary/15">
-            <span className="text-primary-foreground font-bold text-xl">C</span>
+          <div className="mx-auto w-16 h-16 flex items-center justify-center">
+            <img src={logoIcon} alt="Cortanex AI Logo" className="w-16 h-16 object-contain" />
           </div>
           <div>
             <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
