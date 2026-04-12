@@ -92,6 +92,90 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_projects: {
+        Row: {
+          created_at: string
+          employee_id: string
+          id: string
+          project_id: string
+          role: string | null
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          id?: string
+          project_id: string
+          role?: string | null
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          id?: string
+          project_id?: string
+          role?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_projects_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_projects_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employees: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          department: string | null
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          reference_number: string | null
+          role: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          department?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          reference_number?: string | null
+          role?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          department?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          reference_number?: string | null
+          role?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       project_clients: {
         Row: {
           client_id: string
@@ -377,6 +461,42 @@ export type Database = {
           website?: string | null
         }
         Relationships: []
+      }
+      task_employees: {
+        Row: {
+          created_at: string
+          employee_id: string
+          id: string
+          task_id: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          id?: string
+          task_id: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_employees_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_employees_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "project_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, FolderKanban, Users, FileText, ListChecks,
-  ChevronLeft, BarChart3, Truck, Activity, Download,
+  ChevronLeft, BarChart3, Truck, Activity, Download, Users2,
   LogOut, ChevronsLeftRight, Menu, X,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -21,6 +21,7 @@ const navItems = [
   { path: "/activity", label: "Activity Log", icon: Activity },
   { path: "/reports", label: "Reports", icon: BarChart3 },
   { path: "/export", label: "Data Export", icon: Download },
+  { path: "/employees", label: "Employees", icon: Users2 },
 ];
 
 export default function AppLayout() {

@@ -26,13 +26,14 @@ import { saveAs } from "file-saver";
 import { toast } from "sonner";
 import { utils, write } from "xlsx";
 
-type EntityType = "projects" | "clients" | "suppliers" | "tasks";
+type EntityType = "projects" | "clients" | "suppliers" | "tasks" | "employees";
 
 const ENTITY_CONFIG: Record<EntityType, { label: string; icon: React.ElementType; dateField: string }> = {
   projects: { label: "Projects", icon: FolderKanban, dateField: "created_at" },
   clients: { label: "Clients", icon: Users, dateField: "created_at" },
   suppliers: { label: "Suppliers", icon: Truck, dateField: "created_at" },
   tasks: { label: "Tasks", icon: ListChecks, dateField: "created_at" },
+  employees: { label: "Employees", icon: Users, dateField: "created_at" },
 };
 
 const ENTITY_COLUMNS: Record<EntityType, { key: string; label: string }[]> = {
@@ -85,6 +86,18 @@ const ENTITY_COLUMNS: Record<EntityType, { key: string; label: string }[]> = {
     { key: "created_at", label: "Created" },
     { key: "updated_at", label: "Updated" },
   ],
+  employees: [
+    { key: "reference_number", label: "Ref" },
+    { key: "name", label: "Name" },
+    { key: "email", label: "Email" },
+    { key: "phone", label: "Phone" },
+    { key: "role", label: "Role" },
+    { key: "department", label: "Department" },
+    { key: "status", label: "Status" },
+    { key: "notes", label: "Notes" },
+    { key: "created_at", label: "Created" },
+    { key: "updated_at", label: "Updated" },
+  ],
 };
 
 export default function DataExport() {
@@ -116,12 +129,17 @@ export default function DataExport() {
     queryKey: ["tasks-all"],
     queryFn: async () => { const { data } = await supabase.from("project_tasks").select("*"); return data || []; },
   });
+  const { data: employeesData } = useQuery({
+    queryKey: ["employees"],
+    queryFn: async () => { const { data } = await supabase.from("employees").select("*"); return data || []; },
+  });
 
   const rawData: Record<EntityType, any[]> = {
     projects: projects || [],
     clients: clients || [],
     suppliers: suppliers || [],
     tasks: tasks || [],
+    employees: employeesData || [],
   };
 
   const allStatuses = useMemo(() => {
