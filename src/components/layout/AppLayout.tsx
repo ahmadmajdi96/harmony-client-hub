@@ -5,8 +5,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, FolderKanban, Users, FileText, ListChecks,
-  ChevronLeft, ChevronRight, BarChart3, Truck, Activity,
-  LogOut,
+  ChevronLeft, BarChart3, Truck, Activity,
+  LogOut, ChevronsLeftRight,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -25,6 +25,13 @@ export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const { user, signOut } = useAuth();
+
+  const initials = (user?.user_metadata?.full_name || user?.email || "U")
+    .split(" ")
+    .map((w: string) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -53,7 +60,6 @@ export default function AppLayout() {
           </AnimatePresence>
         </div>
 
-        {/* Divider */}
         <div className="mx-4 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
         {/* Navigation */}
@@ -95,36 +101,89 @@ export default function AppLayout() {
           })}
         </nav>
 
-        {/* User & Logout */}
-        <div className="p-3 space-y-1">
-          <div className="mx-1 h-px bg-gradient-to-r from-transparent via-border to-transparent mb-2" />
-          {!collapsed && user && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="px-3 py-2.5 rounded-xl bg-accent/50"
-            >
-              <p className="text-xs font-semibold text-foreground truncate">{user.user_metadata?.full_name || "User"}</p>
-              <p className="text-[10px] text-muted-foreground truncate mt-0.5">{user.email}</p>
-            </motion.div>
-          )}
-          <button onClick={signOut}
-            className={cn(
-              "flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-[13px] font-medium text-muted-foreground hover:bg-destructive/8 hover:text-destructive transition-all duration-200",
-              collapsed && "justify-center"
-            )}>
-            <LogOut className="h-[18px] w-[18px] shrink-0" />
-            {!collapsed && <span>Sign Out</span>}
-          </button>
-        </div>
+        {/* Bottom section */}
+        <div className="mx-3 mb-3 space-y-2">
+          <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
-        {/* Collapse toggle */}
-        <button onClick={() => setCollapsed(!collapsed)}
-          className="flex items-center justify-center h-12 border-t border-border/40 text-muted-foreground/40 hover:text-foreground hover:bg-accent/50 transition-all duration-200">
-          <motion.div animate={{ rotate: collapsed ? 0 : 180 }} transition={{ duration: 0.3 }}>
-            <ChevronLeft className="h-4 w-4" />
-          </motion.div>
-        </button>
+          {/* User profile card */}
+          <AnimatePresence mode="wait">
+            {!collapsed ? (
+              <motion.div
+                key="expanded"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex items-center gap-3 p-3 rounded-xl bg-accent/40 mt-2"
+              >
+                <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shrink-0 ring-1 ring-primary/10">
+                  <span className="text-xs font-bold text-primary">{initials}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-semibold text-foreground truncate leading-tight">{user?.user_metadata?.full_name || "User"}</p>
+                  <p className="text-[11px] text-muted-foreground truncate leading-tight mt-0.5">{user?.email}</p>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="collapsed"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex justify-center mt-2"
+              >
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center ring-1 ring-primary/10 cursor-default">
+                      <span className="text-xs font-bold text-primary">{initials}</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" sideOffset={12} className="text-xs">
+                    <p className="font-semibold">{user?.user_metadata?.full_name || "User"}</p>
+                    <p className="text-muted-foreground">{user?.email}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Action buttons */}
+          <div className={cn("flex gap-1.5", collapsed ? "flex-col" : "flex-row")}>
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={signOut}
+                  className={cn(
+                    "flex items-center justify-center gap-2 rounded-xl text-[13px] font-medium text-muted-foreground hover:bg-destructive/8 hover:text-destructive transition-all duration-200",
+                    collapsed ? "h-9 w-full" : "h-9 flex-1 px-3"
+                  )}
+                >
+                  <LogOut className="h-4 w-4 shrink-0" />
+                  {!collapsed && <span>Sign Out</span>}
+                </button>
+              </TooltipTrigger>
+              {collapsed && <TooltipContent side="right" sideOffset={12} className="text-xs font-medium">Sign Out</TooltipContent>}
+            </Tooltip>
+
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setCollapsed(!collapsed)}
+                  className={cn(
+                    "flex items-center justify-center rounded-xl text-muted-foreground/50 hover:text-foreground hover:bg-accent transition-all duration-200",
+                    collapsed ? "h-9 w-full" : "h-9 w-9 shrink-0"
+                  )}
+                >
+                  <motion.div animate={{ rotate: collapsed ? 0 : 180 }} transition={{ duration: 0.3 }}>
+                    <ChevronsLeftRight className="h-4 w-4" />
+                  </motion.div>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={12} className="text-xs font-medium">
+                {collapsed ? "Expand" : "Collapse"}
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        </div>
       </motion.aside>
 
       <main className="flex-1 overflow-y-auto">
