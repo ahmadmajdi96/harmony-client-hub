@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
-import { utils, writeFileXLSX } from "xlsx";
+import { utils, write } from "xlsx";
 
 type EntityType = "projects" | "clients" | "suppliers" | "tasks";
 
