@@ -16,6 +16,7 @@ import Tasks from "./pages/Tasks";
 import FileManager from "./pages/FileManager";
 import ActivityLog from "./pages/ActivityLog";
 import Reports from "./pages/Reports";
+import DataExport from "./pages/DataExport";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
@@ -58,6 +59,7 @@ const App = () => (
               <Route path="/files" element={<FileManager />} />
               <Route path="/activity" element={<ActivityLog />} />
               <Route path="/reports" element={<Reports />} />
+              <Route path="/export" element={<DataExport />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
