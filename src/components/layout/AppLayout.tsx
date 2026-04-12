@@ -29,12 +29,12 @@ export default function AppLayout() {
     <div className="flex h-screen overflow-hidden bg-background">
       <aside className={cn(
         "flex flex-col shrink-0 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
-        "bg-sidebar text-sidebar-foreground",
+        "bg-sidebar text-sidebar-foreground border-r border-sidebar-border",
         collapsed ? "w-[72px]" : "w-[260px]"
       )}>
-        <div className="flex items-center gap-3 h-16 shrink-0 border-b border-sidebar-border/50 px-5">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center shrink-0 shadow-lg shadow-violet-500/25">
-            <span className="text-white font-bold text-sm">C</span>
+        <div className="flex items-center gap-3 h-16 shrink-0 border-b border-sidebar-border px-5">
+          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary to-violet-400 flex items-center justify-center shrink-0 shadow-md shadow-primary/20">
+            <span className="text-primary-foreground font-bold text-sm">C</span>
           </div>
           {!collapsed && (
             <div className="animate-fade-in">
@@ -51,7 +51,9 @@ export default function AppLayout() {
               <Link key={item.path} to={item.path}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-200 relative group",
-                  isActive ? "bg-sidebar-primary/15 text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+                  isActive
+                    ? "bg-sidebar-accent text-sidebar-primary shadow-sm"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
                 )}>
                 {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full bg-sidebar-primary" />}
                 <item.icon className={cn("h-[18px] w-[18px] shrink-0 transition-colors duration-200", isActive ? "text-sidebar-primary" : "text-sidebar-foreground/70 group-hover:text-sidebar-accent-foreground")} />
@@ -63,7 +65,7 @@ export default function AppLayout() {
           })}
         </nav>
 
-        <div className="border-t border-sidebar-border/50 p-3 space-y-2">
+        <div className="border-t border-sidebar-border p-3 space-y-2">
           {!collapsed && user && (
             <div className="px-3 py-2">
               <p className="text-xs font-medium text-sidebar-accent-foreground truncate">{user.user_metadata?.full_name || "User"}</p>
@@ -72,7 +74,7 @@ export default function AppLayout() {
           )}
           <button onClick={signOut}
             className={cn(
-              "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-[13px] font-medium text-sidebar-foreground hover:bg-red-500/10 hover:text-red-400 transition-all duration-200",
+              "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-[13px] font-medium text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-200",
               collapsed && "justify-center"
             )}>
             <LogOut className="h-[18px] w-[18px] shrink-0" />
@@ -81,7 +83,7 @@ export default function AppLayout() {
         </div>
 
         <button onClick={() => setCollapsed(!collapsed)}
-          className="flex items-center justify-center h-11 border-t border-sidebar-border/50 text-sidebar-foreground/50 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent/40 transition-all duration-200">
+          className="flex items-center justify-center h-11 border-t border-sidebar-border text-sidebar-foreground/50 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent/40 transition-all duration-200">
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </button>
       </aside>
