@@ -59,6 +59,7 @@ const App = () => (
               <Route path="/files" element={<FileManager />} />
               <Route path="/activity" element={<ActivityLog />} />
               <Route path="/reports" element={<Reports />} />
+              <Route path="/export" element={<DataExport />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
