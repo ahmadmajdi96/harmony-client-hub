@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Users, Pencil, Trash2, Eye } from "lucide-react";
+import { Plus, Users, Pencil, Trash2, Eye, Search } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function Clients() {
@@ -22,6 +22,8 @@ export default function Clients() {
   const [dialog, setDialog] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [form, setForm] = useState({ name: "", email: "", phone: "", company: "", address: "", status: "active", notes: "" });
 
   const { data: clients, isLoading } = useQuery({
@@ -66,6 +68,12 @@ export default function Clients() {
   const openAdd = () => { setEditingId(null); setForm({ name: "", email: "", phone: "", company: "", address: "", status: "active", notes: "" }); setDialog(true); };
   const openEdit = (c: any) => { setEditingId(c.id); setForm({ name: c.name, email: c.email || "", phone: c.phone || "", company: c.company || "", address: c.address || "", status: c.status, notes: c.notes || "" }); setDialog(true); };
 
+  const filteredClients = clients?.filter(c => {
+    const matchesSearch = !search || c.name.toLowerCase().includes(search.toLowerCase()) || c.company?.toLowerCase().includes(search.toLowerCase()) || c.email?.toLowerCase().includes(search.toLowerCase()) || c.reference_number?.toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = statusFilter === "all" || c.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
   return (
     <div>
       <PageHeader title="Clients" subtitle="Manage client information and relationships" actionLabel="Add Client" actionIcon={Plus} onAction={openAdd} />
@@ -74,6 +82,22 @@ export default function Clients() {
           <KPICard title="Total Clients" value={String(clients?.length || 0)} icon={Users} status="info" />
           <KPICard title="Active" value={String(clients?.filter(c => c.status === "active").length || 0)} status="success" />
           <KPICard title="Inactive" value={String(clients?.filter(c => c.status === "inactive").length || 0)} status="warning" />
+        </div>
+
+        {/* Search & Filters */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search clients..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <Card>
@@ -91,7 +115,7 @@ export default function Clients() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {clients?.map(c => (
+                {filteredClients?.map(c => (
                   <TableRow key={c.id}>
                     <TableCell className="font-mono text-xs text-muted-foreground">{c.reference_number}</TableCell>
                     <TableCell className="font-medium">{c.name}</TableCell>
@@ -108,8 +132,8 @@ export default function Clients() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {!isLoading && (!clients || clients.length === 0) && (
-                  <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No clients yet. Click "Add Client" to get started.</TableCell></TableRow>
+                {!isLoading && (!filteredClients || filteredClients.length === 0) && (
+                  <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No clients found.</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>

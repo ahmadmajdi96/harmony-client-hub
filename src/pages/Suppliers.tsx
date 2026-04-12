@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Truck, Pencil, Trash2, Eye, Globe, User } from "lucide-react";
+import { Plus, Truck, Pencil, Trash2, Eye, Search } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function Suppliers() {
@@ -22,6 +22,8 @@ export default function Suppliers() {
   const [dialog, setDialog] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [form, setForm] = useState({ name: "", email: "", phone: "", company: "", address: "", status: "active", notes: "", contact_person: "", website: "" });
 
   const { data: suppliers, isLoading } = useQuery({
@@ -66,6 +68,12 @@ export default function Suppliers() {
   const openAdd = () => { setEditingId(null); setForm({ name: "", email: "", phone: "", company: "", address: "", status: "active", notes: "", contact_person: "", website: "" }); setDialog(true); };
   const openEdit = (s: any) => { setEditingId(s.id); setForm({ name: s.name, email: s.email || "", phone: s.phone || "", company: s.company || "", address: s.address || "", status: s.status, notes: s.notes || "", contact_person: s.contact_person || "", website: s.website || "" }); setDialog(true); };
 
+  const filteredSuppliers = suppliers?.filter(s => {
+    const matchesSearch = !search || s.name.toLowerCase().includes(search.toLowerCase()) || s.company?.toLowerCase().includes(search.toLowerCase()) || s.contact_person?.toLowerCase().includes(search.toLowerCase()) || s.reference_number?.toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = statusFilter === "all" || s.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
   return (
     <div>
       <PageHeader title="Suppliers" subtitle="Manage supplier information and relationships" actionLabel="Add Supplier" actionIcon={Plus} onAction={openAdd} />
@@ -74,6 +82,22 @@ export default function Suppliers() {
           <KPICard title="Total Suppliers" value={String(suppliers?.length || 0)} icon={Truck} status="info" />
           <KPICard title="Active" value={String(suppliers?.filter(s => s.status === "active").length || 0)} status="success" />
           <KPICard title="Inactive" value={String(suppliers?.filter(s => s.status === "inactive").length || 0)} status="warning" />
+        </div>
+
+        {/* Search & Filters */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search suppliers..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <Card>
@@ -92,7 +116,7 @@ export default function Suppliers() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {suppliers?.map(s => (
+                {filteredSuppliers?.map(s => (
                   <TableRow key={s.id}>
                     <TableCell className="font-mono text-xs text-muted-foreground">{s.reference_number}</TableCell>
                     <TableCell className="font-medium">{s.name}</TableCell>
@@ -110,8 +134,8 @@ export default function Suppliers() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {!isLoading && (!suppliers || suppliers.length === 0) && (
-                  <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">No suppliers yet. Click "Add Supplier" to get started.</TableCell></TableRow>
+                {!isLoading && (!filteredSuppliers || filteredSuppliers.length === 0) && (
+                  <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">No suppliers found.</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
