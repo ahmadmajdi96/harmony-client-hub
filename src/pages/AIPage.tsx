@@ -167,7 +167,148 @@ function AnalysisCardComponent({ card }: { card: AnalysisCard }) {
   );
 }
 
-export default function AIPage() {
+function WeeklyReportsTab() {
+  const queryClient = useQueryClient();
+
+  const { data: pastReports, isLoading: reportsLoading } = useQuery({
+    queryKey: ["weekly-reports"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("activity_log")
+        .select("*")
+        .eq("entity_type", "report")
+        .eq("action", "created")
+        .order("created_at", { ascending: false })
+        .limit(10);
+      return data || [];
+    },
+  });
+
+  const generateMutation = useMutation({
+    mutationFn: async () => {
+      const resp = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/weekly-report`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ time: "manual" }),
+        }
+      );
+      if (!resp.ok) throw new Error("Failed to generate report");
+      return resp.json();
+    },
+    onSuccess: () => {
+      toast.success("Weekly report generated successfully!");
+      queryClient.invalidateQueries({ queryKey: ["weekly-reports"] });
+    },
+    onError: (e: any) => {
+      toast.error(e.message || "Failed to generate report");
+    },
+  });
+
+  const [expandedReport, setExpandedReport] = useState<string | null>(null);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-4"
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <FileText className="h-5 w-5 text-primary" />
+          <div>
+            <p className="text-sm font-medium">Automated Weekly Reports</p>
+            <p className="text-xs text-muted-foreground">
+              Scheduled every Monday at 8:00 AM UTC. You can also generate one manually.
+            </p>
+          </div>
+        </div>
+        <Button
+          onClick={() => generateMutation.mutate()}
+          disabled={generateMutation.isPending}
+          className="gap-2 rounded-xl"
+        >
+          {generateMutation.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Play className="h-4 w-4" />
+          )}
+          Generate Now
+        </Button>
+      </div>
+
+      {/* Live report result */}
+      {generateMutation.data?.report && (
+        <Card className="rounded-2xl border-primary/20 shadow-md">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                <FileText className="h-4 w-4" />
+              </div>
+              Latest Report — Just Generated
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <MarkdownRenderer content={generateMutation.data.report} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Past reports */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-muted-foreground">Past Reports</h3>
+        {reportsLoading && (
+          <div className="flex items-center gap-2 py-8 justify-center text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span className="text-sm">Loading reports...</span>
+          </div>
+        )}
+        {pastReports?.length === 0 && !reportsLoading && (
+          <p className="text-sm text-muted-foreground text-center py-8">
+            No reports yet. Click "Generate Now" or wait for the weekly schedule.
+          </p>
+        )}
+        {pastReports?.map((report: any) => {
+          const isExpanded = expandedReport === report.id;
+          const reportContent = (report.new_values as any)?.report;
+          return (
+            <Card
+              key={report.id}
+              className="rounded-2xl border-border/40 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => setExpandedReport(isExpanded ? null : report.id)}
+            >
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2.5">
+                    <div className="h-7 w-7 rounded-lg bg-muted/50 flex items-center justify-center">
+                      <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                    </div>
+                    {report.description}
+                  </CardTitle>
+                  <span className="text-xs text-muted-foreground">
+                    {formatDistanceToNow(new Date(report.created_at), { addSuffix: true })}
+                  </span>
+                </div>
+              </CardHeader>
+              {isExpanded && reportContent && (
+                <CardContent>
+                  <MarkdownRenderer content={reportContent} />
+                </CardContent>
+              )}
+            </Card>
+          );
+        })}
+      </div>
+    </motion.div>
+  );
+}
+
+
   return (
     <div>
       <PageHeader
