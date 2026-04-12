@@ -17,10 +17,19 @@ const variantStyles = {
 export function StatusBadge({ status, variant = "default" }: StatusBadgeProps) {
   return (
     <span className={cn(
-      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border",
+      "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium border transition-colors",
       variantStyles[variant]
     )}>
-      {status}
+      <span className={cn(
+        "h-1.5 w-1.5 rounded-full",
+        variant === "success" && "bg-success",
+        variant === "warning" && "bg-warning",
+        variant === "danger" && "bg-destructive",
+        variant === "info" && "bg-info",
+        variant === "default" && "bg-muted-foreground",
+        variant === "pulse" && "bg-info animate-pulse",
+      )} />
+      {status.replace(/_/g, " ")}
     </span>
   );
 }

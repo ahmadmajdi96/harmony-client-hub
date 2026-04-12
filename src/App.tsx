@@ -13,6 +13,7 @@ import Suppliers from "./pages/Suppliers";
 import SupplierDetail from "./pages/SupplierDetail";
 import Tasks from "./pages/Tasks";
 import FileManager from "./pages/FileManager";
+import ActivityLog from "./pages/ActivityLog";
 import Reports from "./pages/Reports";
 import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/suppliers/:id" element={<SupplierDetail />} />
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/files" element={<FileManager />} />
+            <Route path="/activity" element={<ActivityLog />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>

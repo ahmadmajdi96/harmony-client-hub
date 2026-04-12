@@ -47,7 +47,7 @@ export default function Reports() {
     <div>
       <PageHeader title="Reports" subtitle="Analytics and insights across projects and clients" />
       <div className="p-6 space-y-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in">
           <KPICard title="Total Budget" value={`$${totalBudget.toLocaleString()}`} icon={DollarSign} status="info" />
           <KPICard title="Avg Progress" value={`${avgProgress}%`} icon={TrendingUp} status="success" />
           <KPICard title="Task Completion" value={`${taskCompletion}%`} icon={ListChecks} status="warning" />

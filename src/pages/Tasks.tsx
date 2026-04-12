@@ -87,7 +87,7 @@ export default function Tasks() {
     <div>
       <PageHeader title="Tasks" subtitle="All tasks across projects" actionLabel="New Task" actionIcon={Plus} onAction={openAdd} />
       <div className="p-6 space-y-6">
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-4 animate-fade-in">
           <KPICard title="To Do" value={String(todoTasks.length)} icon={ListChecks} status="info" />
           <KPICard title="In Progress" value={String(inProgressTasks.length)} status="warning" />
           <KPICard title="Done" value={String(doneTasks.length)} status="success" />

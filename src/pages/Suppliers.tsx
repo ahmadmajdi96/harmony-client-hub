@@ -70,7 +70,7 @@ export default function Suppliers() {
     <div>
       <PageHeader title="Suppliers" subtitle="Manage supplier information and relationships" actionLabel="Add Supplier" actionIcon={Plus} onAction={openAdd} />
       <div className="p-6 space-y-6">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 animate-fade-in">
           <KPICard title="Total Suppliers" value={String(suppliers?.length || 0)} icon={Truck} status="info" />
           <KPICard title="Active" value={String(suppliers?.filter(s => s.status === "active").length || 0)} status="success" />
           <KPICard title="Inactive" value={String(suppliers?.filter(s => s.status === "inactive").length || 0)} status="warning" />

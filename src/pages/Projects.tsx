@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, FolderKanban, Pencil, Trash2, Eye } from "lucide-react";
+import { Plus, FolderKanban, Pencil, Trash2, Eye, Search } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Progress } from "@/components/ui/progress";
 
@@ -36,6 +36,7 @@ export default function Projects() {
   const [dialog, setDialog] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
   const [form, setForm] = useState({ name: "", description: "", status: "planning", priority: "medium", budget: "", start_date: "", end_date: "", client_id: "", progress: 0 });
 
   const { data: projects, isLoading } = useQuery({
@@ -57,15 +58,9 @@ export default function Projects() {
   const saveMutation = useMutation({
     mutationFn: async () => {
       const payload = {
-        name: form.name,
-        description: form.description || null,
-        status: form.status,
-        priority: form.priority,
-        budget: form.budget ? Number(form.budget) : null,
-        start_date: form.start_date || null,
-        end_date: form.end_date || null,
-        client_id: form.client_id || null,
-        progress: form.progress,
+        name: form.name, description: form.description || null, status: form.status, priority: form.priority,
+        budget: form.budget ? Number(form.budget) : null, start_date: form.start_date || null,
+        end_date: form.end_date || null, client_id: form.client_id || null, progress: form.progress,
       };
       if (editingId) {
         const { error } = await supabase.from("projects").update(payload).eq("id", editingId);
@@ -114,52 +109,65 @@ export default function Projects() {
   const activeCount = projects?.filter(p => p.status === "in_progress").length || 0;
   const completedCount = projects?.filter(p => p.status === "completed").length || 0;
 
+  const filteredProjects = projects?.filter(p =>
+    !search || p.name.toLowerCase().includes(search.toLowerCase()) || (p as any).clients?.name?.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div>
       <PageHeader title="Projects" subtitle="Manage all projects and track progress" actionLabel="New Project" actionIcon={Plus} onAction={openAdd} />
       <div className="p-6 space-y-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in">
           <KPICard title="Total Projects" value={String(projects?.length || 0)} icon={FolderKanban} status="info" />
           <KPICard title="Active" value={String(activeCount)} status="success" />
           <KPICard title="Completed" value={String(completedCount)} status="success" />
           <KPICard title="On Hold" value={String(projects?.filter(p => p.status === "on_hold").length || 0)} status="warning" />
         </div>
 
+        {/* Search */}
+        <div className="relative max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search projects..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {projects?.map(p => (
-            <Card key={p.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-4 space-y-3">
+          {filteredProjects?.map((p, i) => (
+            <Card key={p.id} className="group hover:shadow-lg hover:border-primary/20 transition-all duration-300 hover:-translate-y-0.5 animate-fade-in" style={{ animationDelay: `${i * 50}ms` }}>
+              <CardContent className="p-5 space-y-3">
                 <div className="flex items-start justify-between">
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-sm">{p.name}</h3>
-                      <span className="text-[10px] font-mono text-muted-foreground">{p.reference_number}</span>
+                      <h3 className="font-semibold text-sm truncate">{p.name}</h3>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">{(p as any).clients?.name || "No client"}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[10px] font-mono text-muted-foreground">{p.reference_number}</span>
+                      <span className="text-[10px] text-muted-foreground">·</span>
+                      <span className="text-xs text-muted-foreground truncate">{(p as any).clients?.name || "No client"}</span>
+                    </div>
                   </div>
                   <StatusBadge status={p.status} variant={statusVariant(p.status)} />
                 </div>
                 {p.description && <p className="text-xs text-muted-foreground line-clamp-2">{p.description}</p>}
                 <div className="flex items-center gap-2">
                   <Progress value={p.progress} className="flex-1 h-2" />
-                  <span className="text-xs text-muted-foreground">{p.progress}%</span>
+                  <span className="text-xs font-medium text-muted-foreground">{p.progress}%</span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <StatusBadge status={p.priority} variant={priorityVariant(p.priority)} />
-                  {p.budget && <span>${Number(p.budget).toLocaleString()}</span>}
+                  {p.budget && <span className="font-medium">${Number(p.budget).toLocaleString()}</span>}
                 </div>
-                <div className="flex gap-1 pt-1">
-                  <Button size="sm" variant="outline" className="flex-1 text-xs h-7" asChild>
+                <div className="flex gap-1.5 pt-1">
+                  <Button size="sm" variant="outline" className="flex-1 text-xs h-8 hover:bg-primary hover:text-primary-foreground transition-colors" asChild>
                     <Link to={`/projects/${p.id}`}><Eye className="h-3 w-3 mr-1" /> View</Link>
                   </Button>
-                  <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => openEdit(p)}><Pencil className="h-3 w-3" /></Button>
-                  <Button size="sm" variant="outline" className="text-xs h-7 text-destructive" onClick={() => setDeleteId(p.id)}><Trash2 className="h-3 w-3" /></Button>
+                  <Button size="sm" variant="outline" className="text-xs h-8 hover:bg-accent" onClick={() => openEdit(p)}><Pencil className="h-3 w-3" /></Button>
+                  <Button size="sm" variant="outline" className="text-xs h-8 text-destructive hover:bg-destructive hover:text-destructive-foreground" onClick={() => setDeleteId(p.id)}><Trash2 className="h-3 w-3" /></Button>
                 </div>
               </CardContent>
             </Card>
           ))}
-          {isLoading && <p className="text-muted-foreground text-sm">Loading...</p>}
-          {!isLoading && (!projects || projects.length === 0) && <p className="text-muted-foreground text-sm col-span-full text-center py-8">No projects yet. Click "New Project" to create one.</p>}
+          {isLoading && <p className="text-muted-foreground text-sm animate-pulse">Loading...</p>}
+          {!isLoading && (!filteredProjects || filteredProjects.length === 0) && <p className="text-muted-foreground text-sm col-span-full text-center py-8">No projects found.</p>}
         </div>
       </div>
 
