@@ -41,11 +41,11 @@ function ProtectedRoute() {
   return <AppLayout />;
 }
 
-function PublicRoute() {
+function PublicRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) return <LoadingScreen />;
   if (user) return <Navigate to="/" replace />;
-  return <Outlet />;
+  return <>{children}</>;
 }
 
 const App = () => (
@@ -56,9 +56,8 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
-            <Route element={<PublicRoute />}>
-              <Route path="/login" element={<Login />} />
-            </Route>
+            <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+            <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/projects" element={<Projects />} />
