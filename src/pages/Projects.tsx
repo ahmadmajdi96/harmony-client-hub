@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { KPICard } from "@/components/shared/KPICard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
@@ -44,18 +44,12 @@ export default function Projects() {
 
   const { data: projects, isLoading } = useQuery({
     queryKey: ["projects"],
-    queryFn: async () => {
-      const { data } = await supabase.from("projects").select("*, clients(name)").order("created_at", { ascending: false });
-      return data || [];
-    },
+    queryFn: () => api.get<any[]>("/projects"),
   });
 
   const { data: clients } = useQuery({
     queryKey: ["clients"],
-    queryFn: async () => {
-      const { data } = await supabase.from("clients").select("id, name");
-      return data || [];
-    },
+    queryFn: () => api.get<any[]>("/clients"),
   });
 
   const saveMutation = useMutation({
@@ -66,11 +60,9 @@ export default function Projects() {
         end_date: form.end_date || null, client_id: form.client_id || null, progress: form.progress,
       };
       if (editingId) {
-        const { error } = await supabase.from("projects").update(payload).eq("id", editingId);
-        if (error) throw error;
+        await api.patch(`/projects/${editingId}`, payload);
       } else {
-        const { error } = await supabase.from("projects").insert(payload);
-        if (error) throw error;
+        await api.post("/projects", payload);
       }
     },
     onSuccess: () => {
@@ -83,8 +75,7 @@ export default function Projects() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("projects").delete().eq("id", id);
-      if (error) throw error;
+      await api.delete(`/projects/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
@@ -113,7 +104,7 @@ export default function Projects() {
   const completedCount = projects?.filter(p => p.status === "completed").length || 0;
 
   const filteredProjects = projects?.filter(p => {
-    const matchesSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || (p as any).clients?.name?.toLowerCase().includes(search.toLowerCase()) || p.reference_number?.toLowerCase().includes(search.toLowerCase());
+    const matchesSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.reference_number?.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === "all" || p.status === statusFilter;
     const matchesPriority = priorityFilter === "all" || p.priority === priorityFilter;
     return matchesSearch && matchesStatus && matchesPriority;
@@ -159,12 +150,7 @@ export default function Projects() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filteredProjects?.map((p, i) => (
-            <motion.div
-              key={p.id}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: i * 0.04, ease: [0.16, 1, 0.3, 1] }}
-            >
+            <motion.div key={p.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: i * 0.04, ease: [0.16, 1, 0.3, 1] }}>
               <Card className="group rounded-2xl border-border/40 bg-card hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-0.5 overflow-hidden">
                 <CardContent className="p-5 space-y-3">
                   <div className="flex items-start justify-between">
@@ -172,7 +158,6 @@ export default function Projects() {
                       <h3 className="font-semibold text-sm truncate group-hover:text-primary transition-colors duration-200">{p.name}</h3>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-[10px] font-mono text-muted-foreground/70 bg-muted/50 px-1.5 py-0.5 rounded-md">{p.reference_number}</span>
-                        <span className="text-xs text-muted-foreground truncate">{(p as any).clients?.name || "No client"}</span>
                       </div>
                     </div>
                     <StatusBadge status={p.status} variant={statusVariant(p.status)} />

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { KPICard } from "@/components/shared/KPICard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
@@ -28,21 +28,16 @@ export default function Suppliers() {
 
   const { data: suppliers, isLoading } = useQuery({
     queryKey: ["suppliers"],
-    queryFn: async () => {
-      const { data } = await supabase.from("suppliers").select("*").order("created_at", { ascending: false });
-      return data || [];
-    },
+    queryFn: () => api.get<any[]>("/suppliers"),
   });
 
   const saveMutation = useMutation({
     mutationFn: async () => {
       const payload = { name: form.name, email: form.email || null, phone: form.phone || null, company: form.company || null, address: form.address || null, status: form.status, notes: form.notes || null, contact_person: form.contact_person || null, website: form.website || null };
       if (editingId) {
-        const { error } = await supabase.from("suppliers").update(payload).eq("id", editingId);
-        if (error) throw error;
+        await api.patch(`/suppliers/${editingId}`, payload);
       } else {
-        const { error } = await supabase.from("suppliers").insert(payload);
-        if (error) throw error;
+        await api.post("/suppliers", payload);
       }
     },
     onSuccess: () => {
@@ -55,8 +50,7 @@ export default function Suppliers() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("suppliers").delete().eq("id", id);
-      if (error) throw error;
+      await api.delete(`/suppliers/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
@@ -84,7 +78,6 @@ export default function Suppliers() {
           <KPICard title="Inactive" value={String(suppliers?.filter(s => s.status === "inactive").length || 0)} status="warning" />
         </div>
 
-        {/* Search & Filters */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
