@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://holland-victor-reserved-injuries.trycloudflare.com/api/v1";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://allocated-pills-leeds-kirk.trycloudflare.com/api/v1";
 
 const TOKEN_KEY = "api_access_token";
 const REFRESH_KEY = "api_refresh_token";
