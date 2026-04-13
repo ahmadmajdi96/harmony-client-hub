@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { KPICard } from "@/components/shared/KPICard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
@@ -10,7 +10,6 @@ import { FolderKanban, Users, ListChecks, TrendingUp, Clock, Activity, Truck, Do
 import { Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
-
 
 const statusVariant = (s: string) => {
   if (s === "completed" || s === "active" || s === "done") return "success" as const;
@@ -31,58 +30,35 @@ export default function Dashboard() {
 
   const { data: projects } = useQuery({
     queryKey: ["projects"],
-    queryFn: async () => {
-      const { data } = await supabase.from("projects").select("*, clients(name)").order("created_at", { ascending: false });
-      return data || [];
-    },
+    queryFn: () => api.get<any[]>("/projects"),
   });
 
   const { data: clients } = useQuery({
     queryKey: ["clients"],
-    queryFn: async () => {
-      const { data } = await supabase.from("clients").select("*");
-      return data || [];
-    },
+    queryFn: () => api.get<any[]>("/clients"),
   });
 
   const { data: tasks } = useQuery({
     queryKey: ["tasks-all"],
-    queryFn: async () => {
-      const { data } = await supabase.from("project_tasks").select("*");
-      return data || [];
-    },
+    queryFn: () => api.get<any[]>("/tasks"),
   });
 
   const { data: suppliers } = useQuery({
     queryKey: ["suppliers"],
-    queryFn: async () => {
-      const { data } = await supabase.from("suppliers").select("*");
-      return data || [];
-    },
+    queryFn: () => api.get<any[]>("/suppliers"),
   });
 
   const { data: employees } = useQuery({
     queryKey: ["employees"],
-    queryFn: async () => {
-      const { data } = await supabase.from("employees").select("*");
-      return data || [];
-    },
+    queryFn: () => api.get<any[]>("/employees"),
   });
 
-  const { data: taskEmployees } = useQuery({
-    queryKey: ["task_employees"],
-    queryFn: async () => {
-      const { data } = await supabase.from("task_employees").select("*");
-      return data || [];
-    },
-  });
+  // Derive task_employees from tasks response
+  const taskEmployees = tasks?.flatMap(t => (t.task_employees || []).map((te: any) => ({ ...te, task_id: t.id }))) || [];
 
   const { data: recentActivity } = useQuery({
     queryKey: ["recent-activity"],
-    queryFn: async () => {
-      const { data } = await supabase.from("activity_log").select("*").order("created_at", { ascending: false }).limit(8);
-      return data || [];
-    },
+    queryFn: () => api.get<any[]>("/activity"),
     refetchInterval: 15000,
   });
 
@@ -198,7 +174,7 @@ export default function Dashboard() {
                         <p className="font-medium text-sm truncate group-hover:text-primary transition-colors">{p.name}</p>
                         <span className="text-[10px] font-mono text-muted-foreground/60 bg-muted/50 px-1.5 py-0.5 rounded-md">{p.reference_number}</span>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">{(p as any).clients?.name || "No client"}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{p.client_id ? "Has client" : "No client"}</p>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
                       <div className="hidden sm:flex items-center gap-2 w-28">
@@ -235,7 +211,7 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {recentActivity?.map(log => (
+                  {recentActivity?.slice(0, 8).map(log => (
                     <div key={log.id} className="flex items-start gap-3 group">
                       <div className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 text-[10px] font-bold ${actionColors[log.action] || "bg-muted text-muted-foreground"}`}>
                         {log.action[0].toUpperCase()}
