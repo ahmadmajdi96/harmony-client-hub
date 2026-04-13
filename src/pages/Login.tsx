@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { apiLogin } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Mail, Lock, ArrowRight } from "lucide-react";
 import cortaLogo from "@/assets/corta-logo.png";
 
@@ -15,15 +16,17 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { refreshUser } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      toast({ title: "Login failed", description: error.message, variant: "destructive" });
-    } else {
+    try {
+      await apiLogin(email, password);
+      await refreshUser();
       navigate("/");
+    } catch (error: any) {
+      toast({ title: "Login failed", description: error.message, variant: "destructive" });
     }
     setLoading(false);
   };
@@ -60,7 +63,10 @@ export default function Login() {
               {loading ? "Signing in..." : <><span>Sign In</span><ArrowRight className="ml-2 h-4 w-4" /></>}
             </Button>
           </form>
-          <p className="text-center text-xs text-muted-foreground/60 mt-6">
+          <p className="text-center text-sm text-muted-foreground mt-4">
+            Don't have an account? <Link to="/signup" className="text-primary hover:underline font-medium">Sign up</Link>
+          </p>
+          <p className="text-center text-xs text-muted-foreground/60 mt-4">
             Powered by <span className="font-semibold text-muted-foreground/80">Cortanex AI</span>
           </p>
         </CardContent>
